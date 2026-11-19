@@ -15,17 +15,17 @@ CServerDisplayer::CServerDisplayer()
 		memset(&this->m_log[n], 0, sizeof(this->m_log[n]));
 	}
 
-	this->m_font = CreateFont(70, 0, 0, 0, FW_THIN, 0, 0, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Tahoma");
+	this->m_font = CreateFont(18, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
 
 	this->m_logfont = CreateFont(15, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Verdana");
 
-	this->m_brush[0] = CreateSolidBrush(RGB(105, 105, 105)); //Offline - Standby
+	this->m_brush[0] = CreateSolidBrush(RGB(27, 30, 39)); //Offline - Standby
 
-	strcpy_s(this->m_DisplayerText[0], "STANDBY MODE");
+	strcpy_s(this->m_DisplayerText[0], "STANDBY");
 
-	this->m_brush[1] = CreateSolidBrush(RGB(140, 30, 160)); //Active mode
+	this->m_brush[1] = CreateSolidBrush(RGB(27, 30, 39)); //Active mode
 
-	strcpy_s(this->m_DisplayerText[1], "ACTIVE MODE");
+	strcpy_s(this->m_DisplayerText[1], "ACTIVE");
 }
 
 CServerDisplayer::~CServerDisplayer()
@@ -75,7 +75,7 @@ void CServerDisplayer::PaintAllInfo()
 
 	rect.top = 0;
 
-	rect.bottom = 80;
+	rect.bottom = 34;
 
 	HDC hdc = GetDC(this->m_hwnd);
 
@@ -85,19 +85,55 @@ void CServerDisplayer::PaintAllInfo()
 
 	if (gServerList.CheckJoinServerState() == false)
 	{
-		SetTextColor(hdc, RGB(200, 200, 200));
+		SetTextColor(hdc, RGB(224, 160, 48));
 
 		FillRect(hdc, &rect, this->m_brush[0]);
 
-		DrawText(hdc, this->m_DisplayerText[0], strlen(this->m_DisplayerText[0]), &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+		RECT textRect = rect;
+
+		textRect.left = 40;
+
+		DrawText(hdc, this->m_DisplayerText[0], strlen(this->m_DisplayerText[0]), &textRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+		HBRUSH dotBrush = CreateSolidBrush(RGB(224, 160, 48));
+
+		HGDIOBJ oldBrush = SelectObject(hdc, dotBrush);
+
+		HGDIOBJ oldPen = SelectObject(hdc, GetStockObject(NULL_PEN));
+
+		Ellipse(hdc, 16, 11, 28, 23);
+
+		SelectObject(hdc, oldPen);
+
+		SelectObject(hdc, oldBrush);
+
+		DeleteObject(dotBrush);
 	}
 	else
 	{
-		SetTextColor(hdc, RGB(250, 250, 250));
+		SetTextColor(hdc, RGB(47, 191, 113));
 
 		FillRect(hdc, &rect, this->m_brush[1]);
 
-		DrawText(hdc, this->m_DisplayerText[1], strlen(this->m_DisplayerText[1]), &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+		RECT textRect = rect;
+
+		textRect.left = 40;
+
+		DrawText(hdc, this->m_DisplayerText[1], strlen(this->m_DisplayerText[1]), &textRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+		HBRUSH dotBrush = CreateSolidBrush(RGB(47, 191, 113));
+
+		HGDIOBJ oldBrush = SelectObject(hdc, dotBrush);
+
+		HGDIOBJ oldPen = SelectObject(hdc, GetStockObject(NULL_PEN));
+
+		Ellipse(hdc, 16, 11, 28, 23);
+
+		SelectObject(hdc, oldPen);
+
+		SelectObject(hdc, oldBrush);
+
+		DeleteObject(dotBrush);
 	}
 
 	SelectObject(hdc, OldFont);
@@ -113,7 +149,7 @@ void CServerDisplayer::LogTextPaint()
 
 	GetClientRect(this->m_hwnd, &rect);
 
-	rect.top = 80;
+	rect.top = 34;
 
 	HDC hdc = GetDC(this->m_hwnd);
 
@@ -166,7 +202,7 @@ void CServerDisplayer::LogTextPaint()
 			{
 				SetBkMode(hdc, TRANSPARENT);
 
-				SetTextColor(hdc, RGB(0, 0, 255));
+				SetTextColor(hdc, RGB(90, 160, 255));
 
 				break;
 			}
