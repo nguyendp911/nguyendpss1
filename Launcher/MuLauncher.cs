@@ -22,11 +22,15 @@ class Srv
     public Panel Host;
     public Panel Page;
     public TabBtn Btn;
+    public bool Wanted;                                   // started by the launcher and not stopped by the user
+    public List<DateTime> Restarts = new List<DateTime>(); // watchdog history
+    public bool GaveUp;
+    public DateTime ExitSeen = DateTime.MinValue;
     public IntPtr Menu = IntPtr.Zero;
     public MenuStrip Ms;
 }
 
-class MainForm : Form
+partial class MainForm : Form
 {
     // ---- Win32 ----
     delegate bool EnumProc(IntPtr h, IntPtr lp);
@@ -88,7 +92,11 @@ class MainForm : Form
     Timer timer;
     string logPath;
 
-    public MainForm(bool autostart)
+    readonly List<TabBtn> allBtns = new List<TabBtn>();
+    readonly List<Panel> allPages = new List<Panel>();
+    Label lblOnline;
+
+    public MainForm(bool autostart, bool trayStart)
     {
         logPath = Path.Combine(baseDir, "MuLauncher.log");
         Text = "MuServer Launcher";
@@ -150,8 +158,11 @@ class MainForm : Form
             s.Btn.Click += delegate { SelectTab(myIdx); };
             tabFlow.Controls.Add(s.Btn);
             servers.Add(s);
+            allBtns.Add(s.Btn);
+            allPages.Add(s.Page);
             idx++;
         }
+        AddExtraTabs(tabFlow, card);
 
         // ---------- status bar ----------
         var status = new Panel { Dock = DockStyle.Bottom, Height = 30, BackColor = Theme.Panel, Padding = new Padding(14, 0, 14, 0) };
@@ -160,7 +171,9 @@ class MainForm : Form
         lblGame = MakePill("Game: 0");
         lblDb = MakePill("MariaDB: tắt");
         lblSrv = MakePill("Server: 0/4");
+        lblOnline = MakePill("Online: -");
         pills.Controls.Add(lblGame);
+        pills.Controls.Add(lblOnline);
         pills.Controls.Add(lblDb);
         pills.Controls.Add(lblSrv);
         status.Controls.Add(lblStatus);
@@ -175,7 +188,7 @@ class MainForm : Form
         timer.Tick += OnTick;
         timer.Start();
 
-        if (autostart) Shown += delegate { StartAll(); };
+        InitFeatures(autostart, trayStart);
     }
 
     RBtn MakeBtn(string text, Color accent, bool ghost, string tooltip, EventHandler h)
@@ -200,13 +213,15 @@ class MainForm : Form
     void SelectTab(int i)
     {
         sel = i;
-        for (int k = 0; k < servers.Count; k++)
+        for (int k = 0; k < allPages.Count; k++)
         {
-            servers[k].Page.Visible = (k == i);
-            servers[k].Btn.Selected = (k == i);
-            servers[k].Btn.Invalidate();
+            allPages[k].Visible = (k == i);
+            allBtns[k].Selected = (k == i);
+            allBtns[k].Invalidate();
         }
-        Refresh(servers[i]);
+        var s = Selected();
+        if (s != null) Refresh(s);
+        OnTabShown(i);
     }
 
     void Log(string m)
@@ -222,7 +237,7 @@ class MainForm : Form
         return false;
     }
 
-    Srv Selected() { return servers[sel]; }
+    Srv Selected() { return sel < servers.Count ? servers[sel] : null; }
     static bool Running(Srv s) { return s.P != null && !s.P.HasExited; }
 
     // ---- Start / stop ----
@@ -259,12 +274,13 @@ class MainForm : Form
         psi.WorkingDirectory = dir;
         psi.UseShellExecute = false;
         psi.CreateNoWindow = true;
-        try { s.P = Process.Start(psi); s.Hwnd = IntPtr.Zero; s.Embedded = false; Log("Đã chạy " + s.Name); }
+        try { s.P = Process.Start(psi); s.Hwnd = IntPtr.Zero; s.Embedded = false; s.Wanted = true; s.GaveUp = false; Log("Đã chạy " + s.Name); }
         catch (Exception e) { Log("Lỗi chạy " + s.Name + ": " + e.Message); }
     }
 
     void StopSrv(Srv s)
     {
+        s.Wanted = false;
         if (Running(s))
         {
             try { s.P.Kill(); s.P.WaitForExit(3000); } catch { }
@@ -277,11 +293,14 @@ class MainForm : Form
     void StopAll()
     {
         startQueue.Clear();
+        bool any = false;
+        foreach (var s in servers) if (Running(s)) any = true;
         for (int i = servers.Count - 1; i >= 0; i--) StopSrv(servers[i]); // Game, Data, Join, Connect
+        if (any) AfterStopAll();
     }
 
-    void StartSelected() { StartSrv(Selected()); }
-    void StopSelected() { StopSrv(Selected()); }
+    void StartSelected() { var s = Selected(); if (s != null) StartSrv(s); else Log("Tab này không phải server"); }
+    void StopSelected() { var s = Selected(); if (s != null) StopSrv(s); else Log("Tab này không phải server"); }
 
     void StopDb()
     {
@@ -378,6 +397,7 @@ class MainForm : Form
     void ToggleSelected()
     {
         var s = Selected();
+        if (s == null) { Log("Tab này không phải server"); return; }
         if (s.Hwnd == IntPtr.Zero || !IsWindow(s.Hwnd)) { Log(s.Name + " chưa chạy"); return; }
         if (s.Embedded) Detach(s); else Embed(s);
     }
@@ -466,7 +486,8 @@ class MainForm : Form
             nextStart = DateTime.Now.AddSeconds(2);
         }
 
-        Refresh(Selected());
+        var curSrv = Selected();
+        if (curSrv != null) Refresh(curSrv);
 
         int games = GameProcesses().Count;
         string gt = games > 0 ? "Tắt game (" + games + ")" : "Tắt game";
@@ -492,10 +513,13 @@ class MainForm : Form
             if (!run) { s.Hwnd = IntPtr.Zero; s.Embedded = false; }
             if (s.Btn.Running != run) { s.Btn.Running = run; s.Btn.Invalidate(); }
         }
+
+        FeatureTick();
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
+        if (HideToTrayInstead(e)) return;
         bool any = false;
         foreach (var s in servers) if (Running(s)) any = true;
         if (any || (dbProcess != null && !dbProcess.HasExited))
@@ -525,7 +549,8 @@ static class Program
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        bool auto = Array.IndexOf(args, "--autostart") >= 0;
-        Application.Run(new MainForm(auto));
+        bool tray = Array.IndexOf(args, "--tray") >= 0;
+        bool auto = tray || Array.IndexOf(args, "--autostart") >= 0;
+        Application.Run(new MainForm(auto, tray));
     }
 }

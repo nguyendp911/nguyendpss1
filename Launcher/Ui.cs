@@ -107,6 +107,7 @@ class TabBtn : Control
 {
     public bool Running;
     public bool Selected;
+    public bool NoDot;
     bool hover;
 
     public TabBtn(string text)
@@ -135,13 +136,16 @@ class TabBtn : Control
         if (Selected)
             using (var b = new SolidBrush(Theme.Blue))
                 g.FillRectangle(b, 12, 0, Width - 25, 2);
-        Color dot = Running ? Theme.Green : Theme.Border;
-        if (Running)
-            using (var pen = new Pen(Color.FromArgb(70, Theme.Green), 3))
-                g.DrawEllipse(pen, 12, Height / 2 - 7, 14, 14);
-        using (var b = new SolidBrush(dot))
-            g.FillEllipse(b, 14, Height / 2 - 5, 10, 10);
-        TextRenderer.DrawText(g, Text, Font, new Rectangle(32, 0, Width - 36, Height),
+        if (!NoDot)
+        {
+            Color dot = Running ? Theme.Green : Theme.Border;
+            if (Running)
+                using (var pen = new Pen(Color.FromArgb(70, Theme.Green), 3))
+                    g.DrawEllipse(pen, 12, Height / 2 - 7, 14, 14);
+            using (var b = new SolidBrush(dot))
+                g.FillEllipse(b, 14, Height / 2 - 5, 10, 10);
+        }
+        TextRenderer.DrawText(g, Text, Font, new Rectangle(NoDot ? 16 : 32, 0, Width - 36, Height),
             Selected ? Theme.Text : Theme.Muted, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
     }
 }

@@ -41,11 +41,25 @@ Các project ghi toolset `v141` nhưng build bằng `v143` vẫn được (khôn
 
 ## Launcher
 
-`Launcher/MuLauncher.cs` + `Ui.cs`, build bằng `csc` có sẵn của .NET Framework:
+`Launcher/*.cs`, build bằng `csc` có sẵn của .NET Framework:
 
 ```bat
+cd Launcher
 C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe /target:winexe /platform:x86 /codepage:65001 ^
-  /out:MuLauncher.exe /r:System.Windows.Forms.dll /r:System.Drawing.dll MuLauncher.cs Ui.cs
+  /out:MuLauncher.exe /r:System.Windows.Forms.dll /r:System.Drawing.dll ^
+  /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll ^
+  MuLauncher.cs Ui.cs Ui2.cs Features.cs Logs.cs Accounts.cs Tools.cs Db.cs
 ```
 
-Đặt `MuLauncher.exe` trong thư mục `MuServer` (cạnh ConnectServer, JoinServer, DataServer, GameServer). Launcher nhúng cửa sổ của từng server vào tab, dựng lại menu gốc của server, và có nút mở/tắt game.
+Đặt `MuLauncher.exe` trong thư mục `MuServer` (cạnh ConnectServer, JoinServer, DataServer, GameServer, `mariadb`).
+Tham số: `--autostart` (tự chạy tất cả), `--tray` (mở dưới khay hệ thống và tự chạy tất cả).
+
+- **4 tab server**: nhúng cửa sổ của từng server, dựng lại menu gốc của server, nút chạy/tắt/tách cửa sổ.
+- **Mở/Tắt game** (client trong `..\Client`).
+- **Nhật ký**: xem file log của 4 server và launcher, lọc, chỉ dòng lỗi, tự cập nhật.
+- **Tài khoản**: danh sách, tạo, đổi mật khẩu, đặt level, khóa/mở khóa, xem ai đang online (đọc `MEMB_INFO`/`MEMB_STAT`).
+- **Công cụ**: sao lưu / khôi phục database (`mariadb-dump`, giữ N bản gần nhất, tự sao lưu khi tắt hoặc định kỳ),
+  tự khởi động lại server khi sập, thu nhỏ xuống khay, chạy cùng Windows, đổi địa chỉ server cho client
+  (sửa `ServerList.dat` + `MainInfo.ini`, chạy `InfoEncoder`), mở firewall, nén gói client `.zip`.
+
+Launcher gọi `mariadb.exe`/`mariadb-dump.exe` với file `mariadb\mu.cnf` (user riêng, không đưa vào repo) và `mariadb\root.cnf` (khôi phục cần quyền root vì stored procedure có `DEFINER=root`).
