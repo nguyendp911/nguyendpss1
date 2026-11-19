@@ -9,6 +9,7 @@
 #include "HackCheck.h"
 #include "HealthBar.h"
 #include "Interface.h"
+#include "LoginScale.h"
 #include "Item.h"
 #include "ItemPosition.h"
 #include "ItemStack.h"
@@ -85,6 +86,8 @@ extern "C" _declspec(dllexport) void _cdecl EntryProc()
 	gSound.Init();
 
 	gInterface.Init();
+
+	gLoginScale.Init();
 
 	gHealthBar.Init();
 

@@ -22,3 +22,6 @@ echo === Link
 link /nologo /DLL /LTCG /OPT:REF /OPT:ICF /SUBSYSTEM:WINDOWS /NODEFAULTLIB:libcmt.lib /OUT:"%OUT%\Main.dll" "%OUT%\*.obj" "%OUT%\Main.res" user32.lib shell32.lib advapi32.lib gdi32.lib ole32.lib
 if errorlevel 1 exit /b 1
 echo BUILD OK: %OUT%\Main.dll
+
+
+

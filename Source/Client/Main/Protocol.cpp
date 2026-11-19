@@ -6,6 +6,7 @@
 #include "HackCheck.h"
 #include "HealthBar.h"
 #include "HWID.h"
+#include "LoginRemember.h"
 #include "ItemManager.h"
 #include "ItemStack.h"
 #include "ItemValue.h"
@@ -775,6 +776,8 @@ void CProtocol::GCConnectClientRecv(PMSG_CONNECT_CLIENT_RECV* lpMsg)
 
 void CProtocol::GCConnectAccountRecv(PMSG_CONNECT_ACCOUNT_RECV* lpMsg)
 {
+	gLoginRemember.OnConnectResult(lpMsg->result);
+
 	gReconnect.ReconnectOnConnectAccount(lpMsg->result);
 }
 

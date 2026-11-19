@@ -19,6 +19,8 @@
 "HealthBar.cpp"
 "HWID.cpp"
 "Interface.cpp"
+"LoginScale.cpp"
+"LoginRemember.cpp"
 "Item.cpp"
 "ItemManager.cpp"
 "ItemOption.cpp"

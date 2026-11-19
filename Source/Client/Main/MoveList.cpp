@@ -8,6 +8,42 @@
 
 CMoveList gMoveList;
 
+// Flat panel helpers (digital style shared with the Options menu)
+static void PanelRect(float x, float y, float w, float h, float r, float g, float b, float a)
+{
+	EnableAlphaTest(true);
+
+	glColor4f(r, g, b, a);
+
+	RenderColor(x, y, w, h);
+
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+static void PanelButton(float x, float y, float w, float h, const char* text)
+{
+	bool hover = IsWorkZone((int)x, (int)y, (int)w, (int)h);
+
+	PanelRect(x, y, w, h, 0.23f, 0.27f, 0.32f, 1.0f);
+
+	if (hover)
+	{
+		PanelRect(x + 1.0f, y + 1.0f, w - 2.0f, h - 2.0f, 0.30f, 0.56f, 0.62f, 1.0f);
+	}
+	else
+	{
+		PanelRect(x + 1.0f, y + 1.0f, w - 2.0f, h - 2.0f, 0.13f, 0.16f, 0.19f, 1.0f);
+	}
+
+	EnableAlphaTest(true);
+
+	SetBackgroundTextColor = Color4b(255, 255, 255, 0);
+
+	SetTextColor = Color4b(255, 255, 255, 255);
+
+	RenderText((int)x, (int)y + 1, (char*)text, REAL_WIDTH((int)w), RT3_SORT_CENTER, NULL);
+}
+
 CMoveList::CMoveList()
 {
 	this->MoveListSwitch = false;
@@ -168,13 +204,19 @@ void CMoveList::UpdateMouse()
 
 void CMoveList::RenderFrame()
 {
-	EnableAlphaTest(true);
+	const float X = (float)this->m_Pos.x;
 
-	glColor4f(0.0f, 0.0f, 0.0f, 0.8f);
+	const float Y = (float)this->m_Pos.y;
 
-	RenderColor((float)this->m_Pos.x, (float)this->m_Pos.y, this->m_Size.cx, this->m_Size.cy);
+	PanelRect(X - 1.0f, Y - 1.0f, this->m_Size.cx + 2.0f, this->m_Size.cy + 2.0f, 0.23f, 0.27f, 0.32f, 1.0f);
 
-	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+	PanelRect(X, Y, this->m_Size.cx, this->m_Size.cy, 0.09f, 0.11f, 0.13f, 0.96f);
+
+	PanelRect(X, Y, 3.0f, 17.0f, 0.435f, 0.714f, 0.769f, 1.0f);
+
+	PanelRect(X, Y + 17.0f, this->m_Size.cx, 1.0f, 0.23f, 0.27f, 0.32f, 1.0f);
+
+	PanelRect(X + 5.0f, Y + 32.0f, this->m_Size.cx - 10.0f, 1.0f, 0.17f, 0.21f, 0.25f, 1.0f);
 
 	DisableAlphaBlend();
 
@@ -188,7 +230,7 @@ void CMoveList::RenderFrame()
 
 	SelectObject(m_hFontDC, g_hFontBold);
 	SetBackgroundTextColor = Color4b(0, 0, 0, 0);
-	SetTextColor = Color4b(255, 204, 26, 255);
+	SetTextColor = Color4b(255, 255, 255, 255);
 
 	// Teleport Window
 	RenderText(PosX, PosY, "Teleport Window", REAL_WIDTH((int)(this->m_Size.cx - 10.0f)), RT3_SORT_CENTER, NULL);
@@ -196,7 +238,7 @@ void CMoveList::RenderFrame()
 	PosY = this->m_Pos.y + 20;
 
 	SelectObject(m_hFontDC, g_hFont);
-	SetTextColor = Color4b(127, 178, 255, 255);
+	SetTextColor = Color4b(150, 165, 180, 255);
 
 	// Map
 	RenderText(PosX, PosY, "Map", REAL_WIDTH((int)this->m_SectionWidth), RT3_SORT_CENTER, NULL);
@@ -216,14 +258,10 @@ void CMoveList::RenderFrame()
 	// VIP
 	RenderText(PosX, PosY, "VIP", REAL_WIDTH((int)(this->m_SectionWidth * 0.5f)), RT3_SORT_CENTER, NULL);
 
-	PosX = this->m_Pos.x + 5;
-	PosY = this->m_Pos.y + (int)this->m_Size.cy - 15;
-
-	SetBackgroundTextColor = Color4b(255, 0, 0, 255);
-	SetTextColor = Color4b(255, 255, 255, 255);
-
 	// Close
-	RenderText(PosX, PosY, "Close", REAL_WIDTH((int)(this->m_Size.cx - 10.0f)), RT3_SORT_CENTER, NULL);
+	SelectObject(m_hFontDC, g_hFont);
+
+	PanelButton(X + 5.0f, Y + this->m_Size.cy - 16.0f, this->m_Size.cx - 10.0f, 12.0f, "Close");
 
 	SetBackgroundTextColor = backupBgTextColor;
 	SetTextColor = backupTextColor;
@@ -233,7 +271,7 @@ void CMoveList::RenderScrollbar()
 {
 	EnableAlphaTest(true);
 
-	glColor4f(0.5f, 0.7f, 1.0f, 0.8f);
+	glColor4f(0.435f, 0.714f, 0.769f, 0.9f);
 
 	RenderColor(this->m_ScrollBarPos[0], this->m_ScrollBarPos[1], this->m_ScrollBarSize[0], this->m_ScrollBarSize[1]);
 
@@ -292,13 +330,9 @@ void CMoveList::RenderMapsList()
 			{
 				if (IsWorkZone(PosX, PosY, (int)this->m_Size.cx - 10, 10))
 				{
-					EnableAlphaTest(true);
+					PanelRect((float)PosX, (float)PosY - 1.0f, this->m_Size.cx - 10.0f, 12.0f, 0.17f, 0.21f, 0.25f, 1.0f);
 
-					glColor4f(0.8f, 0.8f, 0.1f, 0.6f);
-
-					RenderColor((float)PosX, (float)PosY, this->m_Size.cx - 10.0f, 10.0f);
-
-					glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+					PanelRect((float)PosX, (float)PosY - 1.0f, 2.0f, 12.0f, 0.435f, 0.714f, 0.769f, 1.0f);
 
 					EnableAlphaTest(true);
 				}
@@ -307,7 +341,7 @@ void CMoveList::RenderMapsList()
 			}
 			else
 			{
-				SetTextColor = Color4b(164, 39, 17, 255);
+				SetTextColor = Color4b(150, 100, 100, 255);
 			}
 
 			SetBackgroundTextColor = Color4b(255, 255, 255, 0);

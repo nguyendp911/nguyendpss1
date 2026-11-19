@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="10.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -132,6 +132,8 @@
     <ClInclude Include="HealthBar.h" />
     <ClInclude Include="HWID.h" />
     <ClInclude Include="Interface.h" />
+    <ClInclude Include="LoginScale.h" />
+    <ClInclude Include="LoginRemember.h" />
     <ClInclude Include="Item.h" />
     <ClInclude Include="ItemManager.h" />
     <ClInclude Include="ItemOption.h" />
@@ -188,6 +190,8 @@
     <ClCompile Include="HealthBar.cpp" />
     <ClCompile Include="HWID.cpp" />
     <ClCompile Include="Interface.cpp" />
+    <ClCompile Include="LoginScale.cpp" />
+    <ClCompile Include="LoginRemember.cpp" />
     <ClCompile Include="Item.cpp" />
     <ClCompile Include="ItemManager.cpp" />
     <ClCompile Include="ItemOption.cpp" />

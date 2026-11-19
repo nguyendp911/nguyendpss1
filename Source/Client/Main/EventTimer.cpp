@@ -5,6 +5,42 @@
 
 CEventTimer gEventTimer;
 
+// Flat panel helpers (digital style shared with the Options menu)
+static void PanelRect(float x, float y, float w, float h, float r, float g, float b, float a)
+{
+	EnableAlphaTest(true);
+
+	glColor4f(r, g, b, a);
+
+	RenderColor(x, y, w, h);
+
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+static void PanelButton(float x, float y, float w, float h, const char* text)
+{
+	bool hover = IsWorkZone((int)x, (int)y, (int)w, (int)h);
+
+	PanelRect(x, y, w, h, 0.23f, 0.27f, 0.32f, 1.0f);
+
+	if (hover)
+	{
+		PanelRect(x + 1.0f, y + 1.0f, w - 2.0f, h - 2.0f, 0.30f, 0.56f, 0.62f, 1.0f);
+	}
+	else
+	{
+		PanelRect(x + 1.0f, y + 1.0f, w - 2.0f, h - 2.0f, 0.13f, 0.16f, 0.19f, 1.0f);
+	}
+
+	EnableAlphaTest(true);
+
+	SetBackgroundTextColor = Color4b(255, 255, 255, 0);
+
+	SetTextColor = Color4b(255, 255, 255, 255);
+
+	RenderText((int)x, (int)y + 1, (char*)text, REAL_WIDTH((int)w), RT3_SORT_CENTER, NULL);
+}
+
 CEventTimer::CEventTimer()
 {
 	this->EventTimerSwitch = false;
@@ -113,13 +149,15 @@ void CEventTimer::RenderFrame()
 
 	this->MainHeight = (this->MainHeight > 430.0f) ? 430.0f : this->MainHeight;
 
-	EnableAlphaTest(true);
+	PanelRect(this->MainPosX - 1.0f, this->MainPosY - 1.0f, this->MainWidth + 2.0f, this->MainHeight + 2.0f, 0.23f, 0.27f, 0.32f, 1.0f);
 
-	glColor4f(0.0f, 0.0f, 0.0f, 0.8f);
+	PanelRect(this->MainPosX, this->MainPosY, this->MainWidth, this->MainHeight, 0.09f, 0.11f, 0.13f, 0.96f);
 
-	RenderColor(this->MainPosX, this->MainPosY, this->MainWidth, this->MainHeight);
+	PanelRect(this->MainPosX, this->MainPosY, 3.0f, 17.0f, 0.435f, 0.714f, 0.769f, 1.0f);
 
-	glColor3f(1.0f, 1.0f, 1.0f);
+	PanelRect(this->MainPosX, this->MainPosY + 17.0f, this->MainWidth, 1.0f, 0.23f, 0.27f, 0.32f, 1.0f);
+
+	PanelRect(this->MainPosX + 5.0f, this->MainPosY + 32.0f, this->MainWidth - 10.0f, 1.0f, 0.17f, 0.21f, 0.25f, 1.0f);
 
 	EnableAlphaTest(true);
 
@@ -129,7 +167,7 @@ void CEventTimer::RenderFrame()
 
 	DWORD backupTextColor = SetTextColor;
 
-	SetTextColor = Color4b(255, 204, 26, 255);
+	SetTextColor = Color4b(255, 255, 255, 255);
 
 	SelectObject(m_hFontDC, g_hFontBold);
 
@@ -137,7 +175,7 @@ void CEventTimer::RenderFrame()
 
 	SetBackgroundTextColor = Color4b(255, 255, 255, 0);
 
-	SetTextColor = Color4b(127, 178, 255, 255);
+	SetTextColor = Color4b(150, 165, 180, 255);
 
 	SelectObject(m_hFontDC, g_hFont);
 
@@ -147,13 +185,9 @@ void CEventTimer::RenderFrame()
 
 	RenderText(PosX, (int)this->MainPosY + 20, "TIME", 0, RT3_SORT_LEFT, NULL);
 
-	SetBackgroundTextColor = Color4b(255, 0, 0, 255);
-
-	SetTextColor = Color4b(255, 255, 255, 255);
-
 	SelectObject(m_hFontDC, g_hFont);
 
-	RenderText((int)this->MainPosX + 5, (int)this->MainPosY + (int)this->MainHeight - 15, "Close", REAL_WIDTH((int)(this->MainWidth - 10.0f)), RT3_SORT_CENTER, NULL);
+	PanelButton(this->MainPosX + 5.0f, this->MainPosY + this->MainHeight - 16.0f, this->MainWidth - 10.0f, 12.0f, "Close");
 
 	SetBackgroundTextColor = backupBgTextColor;
 
@@ -190,12 +224,14 @@ void CEventTimer::RenderEventsTime()
 		{
 			if (IsWorkZone((int)this->MainPosX + 5, PosY, (int)(this->MainWidth - 10), 10))
 			{
-				SetBackgroundTextColor = Color4b(204, 204, 25, 153);
+				PanelRect(this->MainPosX + 5.0f, (float)PosY - 1.0f, this->MainWidth - 10.0f, 12.0f, 0.17f, 0.21f, 0.25f, 1.0f);
+
+				PanelRect(this->MainPosX + 5.0f, (float)PosY - 1.0f, 2.0f, 12.0f, 0.435f, 0.714f, 0.769f, 1.0f);
+
+				EnableAlphaTest(true);
 			}
-			else
-			{
-				SetBackgroundTextColor = Color4b(255, 255, 255, 0);
-			}
+
+			SetBackgroundTextColor = Color4b(255, 255, 255, 0);
 
 			SetTextColor = Color4b(255, 255, 255, 255);
 

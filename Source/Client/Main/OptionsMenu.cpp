@@ -9,19 +9,37 @@
 
 COptionsMenu gOptionsMenu;
 
+// Sidebar layout (virtual 640x480 units)
+#define ROW_GAP 4
+#define PANEL_W 330
+#define PANEL_H 264
+#define PANEL_Y 108
+#define SIDE_W 100
+#define HEADER_H 28
+#define PANEL_PAD 8
+#define TAB_H 22
+#define TAB_GAP 4
+
+static void FlatRect(float x, float y, float w, float h, float r, float g, float b);
+static void DrawArrowButton(float x, float y, float w, float h, bool right, int state);
+
 COptionsMenu::COptionsMenu()
 {
 	this->CurrentOption = OPTION_NONE;
 
 	memset(this->Resolutions, 0, sizeof(this->Resolutions));
 
-	this->BoxWidth = 120;
+	this->BoxWidth = PANEL_W - SIDE_W - PANEL_PAD * 2;
 
-	this->BoxHeight = 22;
+	this->BoxHeight = 20;
 
-	this->MainPosX = ImgCenterScreenPosX((float)this->BoxWidth);
+	this->PanelX = ImgCenterScreenPosX((float)PANEL_W);
 
-	this->MainPosY = 60.0f;
+	this->PanelY = (float)PANEL_Y;
+
+	this->MainPosX = this->PanelX + (float)(SIDE_W + PANEL_PAD);
+
+	this->MainPosY = this->PanelY + (float)(HEADER_H + PANEL_PAD - (this->BoxHeight + ROW_GAP));
 
 	this->PVPWithoutControl = false;
 	this->DeleteShadows = (GetPrivateProfileInt("Antilag", "DeleteShadows", 0, ".\\Config.ini") != 0);
@@ -131,21 +149,20 @@ EXIT:
 	}
 }
 
+static const int g_TabIds[4] = { 1, 2, 3, 4 };
+
 void COptionsMenu::RenderOptionsMenu()
 {
 	DWORD backupBgTextColor = SetBackgroundTextColor;
 
 	DWORD backupTextColor = SetTextColor;
 
-	switch (this->CurrentOption)
+	eMenuOptions cur = (this->CurrentOption == OPTION_NONE) ? OPTION_GENERAL : this->CurrentOption;
+
+	this->RenderFrame(cur);
+
+	switch (cur)
 	{
-		case OPTION_GENERAL:
-		{
-			this->RenderGeneral();
-
-			break;
-		}
-
 		case OPTION_ANTILAG:
 		{
 			this->RenderAntilag();
@@ -169,7 +186,7 @@ void COptionsMenu::RenderOptionsMenu()
 
 		default:
 		{
-			this->RenderAllOptions();
+			this->RenderGeneral();
 
 			break;
 		}
@@ -182,13 +199,15 @@ void COptionsMenu::RenderOptionsMenu()
 
 bool COptionsMenu::CheckOptionsMenu()
 {
-	switch (this->CurrentOption)
-	{
-		case OPTION_GENERAL:
-		{
-			return this->CheckGeneral();
-		}
+	eMenuOptions cur = (this->CurrentOption == OPTION_NONE) ? OPTION_GENERAL : this->CurrentOption;
 
+	if (this->CheckFrame())
+	{
+		return true;
+	}
+
+	switch (cur)
+	{
 		case OPTION_ANTILAG:
 		{
 			return this->CheckAntilag();
@@ -206,10 +225,200 @@ bool COptionsMenu::CheckOptionsMenu()
 
 		default:
 		{
-			return this->CheckAllOptions();
+			return this->CheckGeneral();
 		}
 	}
 
+	return false;
+}
+
+static void FlatRect(float x, float y, float w, float h, float r, float g, float b)
+{
+	EnableAlphaTest(true);
+
+	glColor3f(r, g, b);
+
+	RenderColor(x, y, w, h);
+}
+
+// Flat arrow button (state: 0xFE normal, 0xFF hover, 0x100 pressed)
+static void DrawArrowButton(float x, float y, float w, float h, bool right, int state)
+{
+	FlatRect(x, y, w, h, 0.23f, 0.27f, 0.32f);
+
+	if (state == 0x100)
+	{
+		FlatRect(x + 1.0f, y + 1.0f, w - 2.0f, h - 2.0f, 0.30f, 0.56f, 0.62f);
+	}
+	else if (state == 0xFF)
+	{
+		FlatRect(x + 1.0f, y + 1.0f, w - 2.0f, h - 2.0f, 0.17f, 0.21f, 0.25f);
+	}
+	else
+	{
+		FlatRect(x + 1.0f, y + 1.0f, w - 2.0f, h - 2.0f, 0.09f, 0.11f, 0.13f);
+	}
+
+	const int steps = 4;
+
+	const float step = h / 13.0f;
+
+	const float cx = x + w / 2.0f;
+
+	const float cy = y + h / 2.0f;
+
+	if (state == 0xFF || state == 0x100)
+	{
+		glColor3f(1.0f, 1.0f, 1.0f);
+	}
+	else
+	{
+		glColor3f(0.435f, 0.714f, 0.769f);
+	}
+
+	for (int k = 0; k < steps; k++)
+	{
+		float hh = (float)(steps - k) * 2.0f * step;
+
+		float xx = right ? (cx - (float)steps * step / 2.0f + (float)k * step) : (cx + (float)steps * step / 2.0f - (float)(k + 1) * step);
+
+		RenderColor(xx, cy - hh / 2.0f, step, hh);
+	}
+
+	DisableAlphaBlend();
+
+	glColor3f(1.0f, 1.0f, 1.0f);
+}
+
+static void TabLayout(float PanelX, float PanelY, int index, float& x, float& y, float& w)
+{
+	x = PanelX + (float)PANEL_PAD;
+
+	w = (float)(SIDE_W - PANEL_PAD);
+
+	if (index < 4)
+	{
+		y = PanelY + (float)(HEADER_H + PANEL_PAD) + (float)(index * (TAB_H + TAB_GAP));
+	}
+	else
+	{
+		y = PanelY + (float)(PANEL_H - PANEL_PAD - TAB_H);
+	}
+}
+
+void COptionsMenu::RenderFrame(eMenuOptions cur)
+{
+	const float X = this->PanelX;
+
+	const float Y = this->PanelY;
+
+	/* border + body */
+	FlatRect(X - 1.0f, Y - 1.0f, (float)PANEL_W + 2.0f, (float)PANEL_H + 2.0f, 0.23f, 0.27f, 0.32f);
+	FlatRect(X, Y, (float)PANEL_W, (float)PANEL_H, 0.09f, 0.11f, 0.13f);
+
+	/* sidebar */
+	FlatRect(X, Y + (float)HEADER_H, (float)SIDE_W, (float)(PANEL_H - HEADER_H), 0.07f, 0.085f, 0.10f);
+	FlatRect(X + (float)SIDE_W, Y + (float)HEADER_H, 1.0f, (float)(PANEL_H - HEADER_H), 0.23f, 0.27f, 0.32f);
+
+	/* header */
+	FlatRect(X, Y + (float)(HEADER_H - 1), (float)PANEL_W, 1.0f, 0.23f, 0.27f, 0.32f);
+	FlatRect(X, Y, 3.0f, (float)(HEADER_H - 1), 0.435f, 0.714f, 0.769f);
+
+	SetBackgroundTextColor = Color4b(255, 255, 255, 0);
+
+	SetTextColor = Color4b(255, 255, 255, 255);
+
+	char Text[64] = { 0 };
+
+	sprintf_s(Text, "%s", GlobalText[385]);
+
+	EnableAlphaTest(true);
+
+	RenderText((int)X + 12, CenterTextPosY(Text, (int)(Y + (float)(HEADER_H / 2))), Text, REAL_WIDTH(PANEL_W - 24), RT3_SORT_LEFT, NULL);
+
+	/* tabs */
+	const int textIds[5] = { 919, 926, 920, 921, 388 };
+
+	for (int i = 0; i < 5; i++)
+	{
+		float x, y, w;
+
+		TabLayout(X, Y, i, x, y, w);
+
+		bool selected = (i < 4 && g_TabIds[i] == (int)cur);
+
+		bool hover = IsWorkZone((int)x, (int)y, (int)w, TAB_H);
+
+		if (selected)
+		{
+			FlatRect(x, y, w, (float)TAB_H, 0.17f, 0.21f, 0.25f);
+			FlatRect(x, y, 3.0f, (float)TAB_H, 0.435f, 0.714f, 0.769f);
+		}
+		else if (hover)
+		{
+			FlatRect(x, y, w, (float)TAB_H, 0.12f, 0.15f, 0.18f);
+			FlatRect(x, y, 3.0f, (float)TAB_H, 0.23f, 0.27f, 0.32f);
+		}
+
+		SetBackgroundTextColor = Color4b(255, 255, 255, 0);
+
+		SetTextColor = (selected || hover) ? Color4b(255, 255, 255, 255) : Color4b(205, 214, 222, 255);
+
+		sprintf_s(Text, "%s", GlobalText[textIds[i]]);
+
+		EnableAlphaTest(true);
+
+		RenderText((int)x + 12, CenterTextPosY(Text, (int)(y + (float)(TAB_H / 2))), Text, REAL_WIDTH((int)w - 14), RT3_SORT_LEFT, NULL);
+	}
+
+	DisableAlphaBlend();
+
+	glColor3f(1.0f, 1.0f, 1.0f);
+
+	SetBackgroundTextColor = Color4b(255, 255, 255, 0);
+
+	SetTextColor = Color4b(255, 255, 255, 255);
+}
+
+bool COptionsMenu::CheckFrame()
+{
+	for (int i = 0; i < 5; i++)
+	{
+		float x, y, w;
+
+		TabLayout(this->PanelX, this->PanelY, i, x, y, w);
+
+		if (IsWorkZone((int)x, (int)y, (int)w, TAB_H))
+		{
+			if (MouseLButton && MouseLButtonPush)
+			{
+				MouseLButtonPush = false;
+
+				MouseUpdateTime = 0;
+
+				MouseUpdateTimeMax = 6;
+
+				PlayBuffer(25, 0, 0);
+
+				if (i < 4)
+				{
+					this->CurrentOption = (eMenuOptions)g_TabIds[i];
+				}
+				else
+				{
+					this->CurrentOption = OPTION_NONE;
+
+					ErrorMessage = *(BYTE*)0x083A7C28;
+
+					*(BYTE*)0x083A7C28 = 0;
+				}
+			}
+
+			return true;
+		}
+	}
+
+	/* the rest of the panel swallows clicks so they do not reach the game behind it */
 	return false;
 }
 
@@ -235,42 +444,42 @@ void COptionsMenu::RenderAllOptions()
 	sprintf_s(Text, "%s", GlobalText[385]);
 	EnableAlphaTest(true);
 	RenderText((int)PosX, CenterTextPosY(Text, (int)(PosY + (Height / 2.0f))), Text, REAL_WIDTH((int)Width), RT3_SORT_CENTER, NULL);
-	PosY += (Height + 7.0f);
+	PosY += (Height + ROW_GAP);
 
 	/* GENERAL */
 	this->RenderBox(PosX, PosY, Width, Height);
 	sprintf_s(Text, "%s", GlobalText[919]);
 	EnableAlphaTest(true);
 	RenderText((int)PosX, CenterTextPosY(Text, (int)(PosY + (Height / 2.0f))), Text, REAL_WIDTH((int)Width), RT3_SORT_CENTER, NULL);
-	PosY += (Height + 7.0f);
+	PosY += (Height + ROW_GAP);
 
 	/* ANTILAG */
 	this->RenderBox(PosX, PosY, Width, Height);
 	sprintf_s(Text, "%s", GlobalText[926]);
 	EnableAlphaTest(true);
 	RenderText((int)PosX, CenterTextPosY(Text, (int)(PosY + (Height / 2.0f))), Text, REAL_WIDTH((int)Width), RT3_SORT_CENTER, NULL);
-	PosY += (Height + 7.0f);
+	PosY += (Height + ROW_GAP);
 
 	/* SCREEN */
 	this->RenderBox(PosX, PosY, Width, Height);
 	sprintf_s(Text, "%s", GlobalText[920]);
 	EnableAlphaTest(true);
 	RenderText((int)PosX, CenterTextPosY(Text, (int)(PosY + (Height / 2.0f))), Text, REAL_WIDTH((int)Width), RT3_SORT_CENTER, NULL);
-	PosY += (Height + 7.0f);
+	PosY += (Height + ROW_GAP);
 
 	/* FONT */
 	this->RenderBox(PosX, PosY, Width, Height);
 	sprintf_s(Text, "%s", GlobalText[921]);
 	EnableAlphaTest(true);
 	RenderText((int)PosX, CenterTextPosY(Text, (int)(PosY + (Height / 2.0f))), Text, REAL_WIDTH((int)Width), RT3_SORT_CENTER, NULL);
-	PosY += (Height + 7.0f);
+	PosY += (Height + ROW_GAP);
 
 	/* CLOSE */
 	this->RenderBox(PosX, PosY, Width, Height);
 	sprintf_s(Text, "%s", GlobalText[388]);
 	EnableAlphaTest(true);
 	RenderText((int)PosX, CenterTextPosY(Text, (int)(PosY + (Height / 2.0f))), Text, REAL_WIDTH((int)Width), RT3_SORT_CENTER, NULL);
-	PosY += (Height + 7.0f);
+	PosY += (Height + ROW_GAP);
 }
 
 bool COptionsMenu::CheckAllOptions()
@@ -281,7 +490,7 @@ bool COptionsMenu::CheckAllOptions()
 
 	int PosX = (int)this->MainPosX;
 
-	int PosY = (int)this->MainPosY + (Height + 7);
+	int PosY = (int)this->MainPosY + (Height + ROW_GAP);
 
 	for (int i = OPTION_GENERAL; i < MAX_OPTIONS; i++)
 	{
@@ -303,7 +512,7 @@ bool COptionsMenu::CheckAllOptions()
 			}
 		}
 
-		PosY += (Height + 7);
+		PosY += (Height + ROW_GAP);
 	}
 
 	if (this->CheckClose(PosX, PosY))
@@ -324,43 +533,42 @@ void COptionsMenu::RenderGeneral()
 	SetTextColor = Color4b(255, 255, 255, 255);
 
 	this->RenderGeneralTitle(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	if (SceneFlag == CHARACTER_SCENE || SceneFlag == MAIN_SCENE)
 	{
 		this->RenderLanguage(PosX, PosY);
-		PosY += ((float)this->BoxHeight + 7.0f);
+		PosY += ((float)this->BoxHeight + ROW_GAP);
 	}
 
 	this->RenderPVPWithoutControl(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderAutomaticAttack(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderSoundOnWhisper(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderSoundVolume(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderMusicVolume(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	if (m_MusicOnOff)
 	{
 		this->RenderMusicControls(PosX, PosY);
-		PosY += ((float)this->BoxHeight + 7.0f);
+		PosY += ((float)this->BoxHeight + ROW_GAP);
 	}
 
-	this->RenderBack(PosX, PosY);
 }
 
 bool COptionsMenu::CheckGeneral()
 {
 	int PosX = (int)this->MainPosX;
 
-	int PosY = (int)this->MainPosY + (this->BoxHeight + 7);
+	int PosY = (int)this->MainPosY + (this->BoxHeight + ROW_GAP);
 
 	if (SceneFlag == CHARACTER_SCENE || SceneFlag == MAIN_SCENE)
 	{
@@ -369,7 +577,7 @@ bool COptionsMenu::CheckGeneral()
 			return true;
 		}
 
-		PosY += (this->BoxHeight + 7);
+		PosY += (this->BoxHeight + ROW_GAP);
 	}
 
 	if (this->CheckPVPWithoutControl(PosX, PosY))
@@ -377,35 +585,35 @@ bool COptionsMenu::CheckGeneral()
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckAutomaticAttack(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckSoundOnWhisper(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckSoundVolume(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckMusicVolume(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (m_MusicOnOff)
 	{
@@ -414,19 +622,17 @@ bool COptionsMenu::CheckGeneral()
 			return true;
 		}
 
-		PosY += (this->BoxHeight + 7);
+		PosY += (this->BoxHeight + ROW_GAP);
 	}
 
-	if (this->CheckBack(PosX, PosY))
-	{
-		return true;
-	}
 
 	return false;
 }
 
 void COptionsMenu::RenderGeneralTitle(float PosX, float PosY)
 {
+	return; // the sidebar tab already names the section
+
 	DisableAlphaBlend();
 
 	glColor3f(0.8f, 0.6f, 0.4f);
@@ -464,16 +670,16 @@ void COptionsMenu::RenderLanguage(float PosX, float PosY)
 		{
 			if (MouseLButtonPush)
 			{
-				RenderBitmap(0x100, PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, (0.0f / 32.0f), (0.0f / 32.0f), (32.0f / 32.0f), (32.0f / 32.0f), true, true);
+				DrawArrowButton(PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, false, 0x100);
 			}
 			else
 			{
-				RenderBitmap(0xFF, PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, (0.0f / 32.0f), (0.0f / 32.0f), (32.0f / 32.0f), (32.0f / 32.0f), true, true);
+				DrawArrowButton(PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, false, 0xFF);
 			}
 		}
 		else
 		{
-			RenderBitmap(0xFE, PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, (0.0f / 32.0f), (0.0f / 32.0f), (32.0f / 32.0f), (32.0f / 32.0f), true, true);
+			DrawArrowButton(PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, false, 0xFE);
 		}
 	}
 
@@ -483,16 +689,16 @@ void COptionsMenu::RenderLanguage(float PosX, float PosY)
 		{
 			if (MouseLButtonPush)
 			{
-				RenderBitmap(0x100, PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, (32.0f / 32.0f), (0.0f / 32.0f), (-32.0f / 32.0f), (32.0f / 32.0f), true, true);
+				DrawArrowButton(PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, true, 0x100);
 			}
 			else
 			{
-				RenderBitmap(0xFF, PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, (32.0f / 32.0f), (0.0f / 32.0f), (-32.0f / 32.0f), (32.0f / 32.0f), true, true);
+				DrawArrowButton(PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, true, 0xFF);
 			}
 		}
 		else
 		{
-			RenderBitmap(0xFE, PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, (32.0f / 32.0f), (0.0f / 32.0f), (-32.0f / 32.0f), (32.0f / 32.0f), true, true);
+			DrawArrowButton(PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, true, 0xFE);
 		}
 	}
 }
@@ -1059,117 +1265,112 @@ void COptionsMenu::RenderAntilag()
 	SetTextColor = Color4b(255, 255, 255, 255);
 
 	this->RenderAntilagTitle(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderDeleteShadows(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderDeleteObjects(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderDeleteFloor(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderDeleteSkills(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderDeleteStaticEffects(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderDeleteDynamicEffects(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderDeleteWings(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderDeleteHPBar(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderDeleteInterface(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
-	this->RenderBack(PosX, PosY);
 }
 
 bool COptionsMenu::CheckAntilag()
 {
 	int PosX = (int)this->MainPosX;
 
-	int PosY = (int)this->MainPosY + (this->BoxHeight + 7);
+	int PosY = (int)this->MainPosY + (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckDeleteShadows(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckDeleteObjects(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckDeleteFloor(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckDeleteSkills(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckDeleteStaticEffects(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckDeleteDynamicEffects(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckDeleteWings(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckDeleteHPBar(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckDeleteInterface(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
-
-	if (this->CheckBack(PosX, PosY))
-	{
-		return true;
-	}
 
 	return false;
 }
 
 void COptionsMenu::RenderAntilagTitle(float PosX, float PosY)
 {
+	return; // the sidebar tab already names the section
+
 	DisableAlphaBlend();
 
 	glColor3f(0.8f, 0.6f, 0.4f);
@@ -1606,34 +1807,33 @@ void COptionsMenu::RenderScreen()
 	SetTextColor = Color4b(255, 255, 255, 255);
 
 	this->RenderScreenTitle(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderWindowMode(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	if (gWindow.m_WindowMode)
 	{
 		this->RenderBorderless(PosX, PosY);
-		PosY += ((float)this->BoxHeight + 7.0f);
+		PosY += ((float)this->BoxHeight + ROW_GAP);
 	}
 
 	this->RenderResolutions(PosX, PosY);
 
-	this->RenderBack(PosX, PosY);
 }
 
 bool COptionsMenu::CheckScreen()
 {
 	int PosX = (int)this->MainPosX;
 
-	int PosY = (int)this->MainPosY + (this->BoxHeight + 7);
+	int PosY = (int)this->MainPosY + (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckWindowMode(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (gWindow.m_WindowMode)
 	{
@@ -1642,7 +1842,7 @@ bool COptionsMenu::CheckScreen()
 			return true;
 		}
 
-		PosY += (this->BoxHeight + 7);
+		PosY += (this->BoxHeight + ROW_GAP);
 	}
 
 	if (this->CheckResolutions(PosX, PosY))
@@ -1650,16 +1850,14 @@ bool COptionsMenu::CheckScreen()
 		return true;
 	}
 
-	if (this->CheckBack(PosX, PosY))
-	{
-		return true;
-	}
 
 	return false;
 }
 
 void COptionsMenu::RenderScreenTitle(float PosX, float PosY)
 {
+	return; // the sidebar tab already names the section
+
 	DisableAlphaBlend();
 
 	glColor3f(0.8f, 0.6f, 0.4f);
@@ -1753,31 +1951,35 @@ void COptionsMenu::RenderResolutions(float PosX, float& PosY)
 
 	char Text[64] = { 0 };
 
+	float cw = (float)(this->BoxWidth - 4) / 2.0f;
+
 	for (int i = 0; i < MAX_RESOLUTION_VALUE; i++)
 	{
+		float x = PosX + (float)(i % 2) * (cw + 4.0f);
+
 		DisableAlphaBlend();
 
 		glColor3f(1.0f, 1.0f, 1.0f);
 
-		RenderBitmap(240, PosX, PosY, (float)this->BoxWidth, (float)this->BoxHeight, (0.0f / 256.0f), (0.0f / 64.0f), (213.0f / 256.0f), (64.0f / 64.0f), true, true);
+		RenderBitmap(240, x, PosY, cw, (float)this->BoxHeight, (0.0f / 256.0f), (0.0f / 64.0f), (213.0f / 256.0f), (64.0f / 64.0f), true, true);
 
 		if (this->Resolutions[i])
 		{
 			glColor3f(1.0f, 1.0f, 0.0f);
 
-			RenderBitmap(240, PosX, PosY, (float)this->BoxWidth, (float)this->BoxHeight, (0.0f / 256.0f), (0.0f / 64.0f), (213.0f / 256.0f), (64.0f / 64.0f), true, true);
+			RenderBitmap(240, x, PosY, cw, (float)this->BoxHeight, (0.0f / 256.0f), (0.0f / 64.0f), (213.0f / 256.0f), (64.0f / 64.0f), true, true);
 
 			glColor3f(1.0f, 1.0f, 1.0f);
 
 			DisableAlphaBlend();
 		}
-		else if (IsWorkZone((int)PosX, (int)PosY, this->BoxWidth, this->BoxHeight))
+		else if (IsWorkZone((int)x, (int)PosY, (int)cw, this->BoxHeight))
 		{
 			EnableAlphaBlend();
 
 			glColor3f(0.8f, 0.6f, 0.4f);
 
-			RenderBitmap(240, PosX, PosY, (float)this->BoxWidth, (float)this->BoxHeight, (0.0f / 256.0f), (0.0f / 64.0f), (213.0f / 256.0f), (64.0f / 64.0f), true, true);
+			RenderBitmap(240, x, PosY, cw, (float)this->BoxHeight, (0.0f / 256.0f), (0.0f / 64.0f), (213.0f / 256.0f), (64.0f / 64.0f), true, true);
 
 			glColor3f(1.0f, 1.0f, 1.0f);
 
@@ -1788,17 +1990,24 @@ void COptionsMenu::RenderResolutions(float PosX, float& PosY)
 
 		EnableAlphaTest(true);
 
-		RenderText((int)PosX, CenterTextPosY(Text, ((int)PosY + (this->BoxHeight / 2))), Text, REAL_WIDTH(this->BoxWidth), RT3_SORT_CENTER, NULL);
+		RenderText((int)x, CenterTextPosY(Text, ((int)PosY + (this->BoxHeight / 2))), Text, REAL_WIDTH((int)cw), RT3_SORT_CENTER, NULL);
 
-		PosY += ((float)this->BoxHeight + 7.0f);
+		if (i % 2 == 1 || i == MAX_RESOLUTION_VALUE - 1)
+		{
+			PosY += ((float)this->BoxHeight + ROW_GAP);
+		}
 	}
 }
 
 bool COptionsMenu::CheckResolutions(int PosX, int& PosY)
 {
+	int cw = (this->BoxWidth - 4) / 2;
+
 	for (int i = 0; i < MAX_RESOLUTION_VALUE; i++)
 	{
-		if (IsWorkZone(PosX, PosY, this->BoxWidth, this->BoxHeight))
+		int x = PosX + (i % 2) * (cw + 4);
+
+		if (IsWorkZone(x, PosY, cw, this->BoxHeight))
 		{
 			if (MouseLButton && MouseLButtonPush)
 			{
@@ -1823,7 +2032,10 @@ bool COptionsMenu::CheckResolutions(int PosX, int& PosY)
 			return true;
 		}
 
-		PosY += (this->BoxHeight + 7);
+		if (i % 2 == 1 || i == MAX_RESOLUTION_VALUE - 1)
+		{
+			PosY += (this->BoxHeight + ROW_GAP);
+		}
 	}
 
 	return false;
@@ -1839,77 +2051,72 @@ void COptionsMenu::RenderFont()
 	SetTextColor = Color4b(255, 255, 255, 255);
 
 	this->RenderFontTitle(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderFontStyle(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderFontBold(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderFontItalic(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderFontButtons(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
 	this->RenderResetFonts(PosX, PosY);
-	PosY += ((float)this->BoxHeight + 7.0f);
+	PosY += ((float)this->BoxHeight + ROW_GAP);
 
-	this->RenderBack(PosX, PosY);
 }
 
 bool COptionsMenu::CheckFont()
 {
 	int PosX = (int)this->MainPosX;
 
-	int PosY = (int)this->MainPosY + (this->BoxHeight + 7);
+	int PosY = (int)this->MainPosY + (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckFontStyle(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckFontBold(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckFontItalic(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckFontButtons(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
+	PosY += (this->BoxHeight + ROW_GAP);
 
 	if (this->CheckResetFonts(PosX, PosY))
 	{
 		return true;
 	}
 
-	PosY += (this->BoxHeight + 7);
-
-	if (this->CheckBack(PosX, PosY))
-	{
-		return true;
-	}
 
 	return false;
 }
 
 void COptionsMenu::RenderFontTitle(float PosX, float PosY)
 {
+	return; // the sidebar tab already names the section
+
 	DisableAlphaBlend();
 
 	glColor3f(0.8f, 0.6f, 0.4f);
@@ -1954,16 +2161,16 @@ void COptionsMenu::RenderFontStyle(float PosX, float& PosY)
 		{
 			if (MouseLButtonPush)
 			{
-				RenderBitmap(0x100, PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, (0.0f / 32.0f), (0.0f / 32.0f), (32.0f / 32.0f), (32.0f / 32.0f), true, true);
+				DrawArrowButton(PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, false, 0x100);
 			}
 			else
 			{
-				RenderBitmap(0xFF, PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, (0.0f / 32.0f), (0.0f / 32.0f), (32.0f / 32.0f), (32.0f / 32.0f), true, true);
+				DrawArrowButton(PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, false, 0xFF);
 			}
 		}
 		else
 		{
-			RenderBitmap(0xFE, PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, (0.0f / 32.0f), (0.0f / 32.0f), (32.0f / 32.0f), (32.0f / 32.0f), true, true);
+			DrawArrowButton(PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, false, 0xFE);
 		}
 	}
 
@@ -1973,16 +2180,16 @@ void COptionsMenu::RenderFontStyle(float PosX, float& PosY)
 		{
 			if (MouseLButtonPush)
 			{
-				RenderBitmap(0x100, PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, (32.0f / 32.0f), (0.0f / 32.0f), (-32.0f / 32.0f), (32.0f / 32.0f), true, true);
+				DrawArrowButton(PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, true, 0x100);
 			}
 			else
 			{
-				RenderBitmap(0xFF, PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, (32.0f / 32.0f), (0.0f / 32.0f), (-32.0f / 32.0f), (32.0f / 32.0f), true, true);
+				DrawArrowButton(PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, true, 0xFF);
 			}
 		}
 		else
 		{
-			RenderBitmap(0xFE, PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, (32.0f / 32.0f), (0.0f / 32.0f), (-32.0f / 32.0f), (32.0f / 32.0f), true, true);
+			DrawArrowButton(PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, true, 0xFE);
 		}
 	}
 }
@@ -2154,16 +2361,16 @@ void COptionsMenu::RenderFontButtons(float PosX, float& PosY)
 		{
 			if (MouseLButtonPush)
 			{
-				RenderBitmap(0x100, PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, (0.0f / 32.0f), (0.0f / 32.0f), (32.0f / 32.0f), (32.0f / 32.0f), true, true);
+				DrawArrowButton(PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, false, 0x100);
 			}
 			else
 			{
-				RenderBitmap(0xFF, PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, (0.0f / 32.0f), (0.0f / 32.0f), (32.0f / 32.0f), (32.0f / 32.0f), true, true);
+				DrawArrowButton(PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, false, 0xFF);
 			}
 		}
 		else
 		{
-			RenderBitmap(0xFE, PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, (0.0f / 32.0f), (0.0f / 32.0f), (32.0f / 32.0f), (32.0f / 32.0f), true, true);
+			DrawArrowButton(PosX, PosY, (float)this->BoxHeight, (float)this->BoxHeight, false, 0xFE);
 		}
 	}
 
@@ -2173,16 +2380,16 @@ void COptionsMenu::RenderFontButtons(float PosX, float& PosY)
 		{
 			if (MouseLButtonPush)
 			{
-				RenderBitmap(0x100, PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, (32.0f / 32.0f), (0.0f / 32.0f), (-32.0f / 32.0f), (32.0f / 32.0f), true, true);
+				DrawArrowButton(PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, true, 0x100);
 			}
 			else
 			{
-				RenderBitmap(0xFF, PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, (32.0f / 32.0f), (0.0f / 32.0f), (-32.0f / 32.0f), (32.0f / 32.0f), true, true);
+				DrawArrowButton(PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, true, 0xFF);
 			}
 		}
 		else
 		{
-			RenderBitmap(0xFE, PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, (32.0f / 32.0f), (0.0f / 32.0f), (-32.0f / 32.0f), (32.0f / 32.0f), true, true);
+			DrawArrowButton(PosX + (float)(this->BoxWidth - this->BoxHeight), PosY, (float)this->BoxHeight, (float)this->BoxHeight, true, 0xFE);
 		}
 	}
 }

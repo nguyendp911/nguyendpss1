@@ -63,3 +63,17 @@ Tham số: `--autostart` (tự chạy tất cả), `--tray` (mở dưới khay h
   (sửa `ServerList.dat` + `MainInfo.ini`, chạy `InfoEncoder`), mở firewall, nén gói client `.zip`.
 
 Launcher gọi `mariadb.exe`/`mariadb-dump.exe` với file `mariadb\mu.cnf` (user riêng, không đưa vào repo) và `mariadb\root.cnf` (khôi phục cần quyền root vì stored procedure có `DEFINER=root`).
+
+## Giao diện client (Main.dll)
+
+Giao diện đăng nhập và các bảng trong game được vẽ lại theo phong cách phẳng ("digital"):
+
+- **Đăng nhập** (`LoginScale.cpp`, `LoginRemember.cpp`): form thu gọn ở giữa màn hình, ô "Remember me", danh sách tài khoản đã lưu
+  (mã hóa DPAPI, file `LoginAccounts.dat` cạnh client). Chọn server có khoảng cách giữa nút nhóm và danh sách (`ServerList.cpp`).
+- **Menu Esc / Options** (`OptionsMenu.cpp`): một cửa sổ có sidebar (General, Antilag, Screen, Font, Close), độ phân giải xếp 2 cột, nút mũi tên phẳng.
+- **Event Timer (H) / Teleport (M)** (`EventTimer.cpp`, `MoveList.cpp`): bảng phẳng, nút Close, hàng sáng khi rê chuột.
+- **Chat** (`Interface.cpp`): khung chat ở góc dưới trái, khung nhập chat phẳng (ô chat, ô thì thầm, nút gửi) ngay bên dưới.
+  Khung nền chỉ hiện khi đang mở ô nhập chat. Vị trí chỉnh bằng `CHAT_LOG_POS_X/Y`, `CHAT_INPUT_Y`, `CHAT_LOG_WIDTH`.
+
+Ảnh skin được sinh bằng `Tools/ClientSkin` (`make_skin7.py` cho màn hình đăng nhập, `make_menu_skin.py` cho menu Esc và hộp thoại;
+cần Pillow). Build bình thường bằng `Build/build-main.bat`; `Build/build-main-trace.bat` bật `BITMAP_TRACE` để ghi lại các lệnh vẽ khi cần dò vị trí giao diện.

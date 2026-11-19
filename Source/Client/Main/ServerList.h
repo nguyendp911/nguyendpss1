@@ -44,6 +44,10 @@ public:
 
 	static void ServerBoxText(int iPos_x, int iPos_y, char* pszText, int iBoxWidth, int iSort, SIZE* lpTextSize);
 
+	static void ServerListBoxTexture(int Texture, float x, float y, float Width, float Height, float u, float v, float uWidth, float vHeight, bool Scale, bool StartScale);
+
+	static void ServerListBoxText(int iPos_x, int iPos_y, char* pszText, int iBoxWidth, int iSort, SIZE* lpTextSize);
+
 private:
 
 	char m_ServerListInfo[MAX_SERVER_CODE][32];

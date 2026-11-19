@@ -3,6 +3,9 @@
 
 CServerList gServerList;
 
+// extra space (virtual units) between the server group button and the server list on the server select screen
+#define SERVER_LIST_GAP 12
+
 CServerList::CServerList()
 {
 	memset(this->m_ServerListInfo, 0, sizeof(this->m_ServerListInfo));
@@ -28,17 +31,17 @@ void CServerList::Init()
 	SetCompleteHook(0xE8, 0x004ED016, &this->ServerNameChange); //Ingame Character
 
 	SetCompleteHook(0xE8, 0x0051F357, &this->ServerBoxTexture); // Server
-	SetCompleteHook(0xE8, 0x0051F5FD, &this->ServerBoxTexture); // ServerList
-	SetCompleteHook(0xE8, 0x0051F761, &this->ServerBoxTexture); // ServerListBar
-	SetCompleteHook(0xE8, 0x0051F7F7, &this->ServerBoxTexture); // ServerListBar
+	SetCompleteHook(0xE8, 0x0051F5FD, &this->ServerListBoxTexture); // ServerList
+	SetCompleteHook(0xE8, 0x0051F761, &this->ServerListBoxTexture); // ServerListBar
+	SetCompleteHook(0xE8, 0x0051F7F7, &this->ServerListBoxTexture); // ServerListBar
 
 	SetCompleteHook(0xE8, 0x0051F39E, &this->ServerBoxText); // Server
-	SetCompleteHook(0xE8, 0x0051F688, &this->ServerBoxText); // ServerList
+	SetCompleteHook(0xE8, 0x0051F688, &this->ServerListBoxText); // ServerList
 
 	SetDword(0x0051E8B7 + 1, 150 + 135); // ServerMouseX
 	SetDword(0x0051E8A5 + 1, 375 + 135); // ServerMouseX
-	SetDword(0x0051EC8F + 1, 230 + 135); // ServerListMouseX
-	SetDword(0x0051EC9A + 1, 364 + 135); // ServerListMouseX
+	SetDword(0x0051EC8F + 1, 230 + 135 + SERVER_LIST_GAP); // ServerListMouseX
+	SetDword(0x0051EC9A + 1, 364 + 135 + SERVER_LIST_GAP); // ServerListMouseX
 }
 
 void CServerList::MultiServerNameChange(char* Text, char* Format, char* ServerName, int ServerCode, char* TextLine)
@@ -71,4 +74,14 @@ void CServerList::ServerBoxTexture(int Texture, float x, float y, float Width, f
 void CServerList::ServerBoxText(int iPos_x, int iPos_y, char* pszText, int iBoxWidth, int iSort, SIZE* lpTextSize)
 {
 	RenderText(iPos_x + 135, iPos_y, pszText, iBoxWidth, iSort, lpTextSize);
+}
+
+void CServerList::ServerListBoxTexture(int Texture, float x, float y, float Width, float Height, float u, float v, float uWidth, float vHeight, bool Scale, bool StartScale)
+{
+	RenderBitmap(Texture, x + 135.0f + SERVER_LIST_GAP, y, Width, Height, u, v, uWidth, vHeight, Scale, StartScale);
+}
+
+void CServerList::ServerListBoxText(int iPos_x, int iPos_y, char* pszText, int iBoxWidth, int iSort, SIZE* lpTextSize)
+{
+	RenderText(iPos_x + 135 + SERVER_LIST_GAP, iPos_y, pszText, iBoxWidth, iSort, lpTextSize);
 }

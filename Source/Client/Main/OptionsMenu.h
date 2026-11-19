@@ -30,6 +30,8 @@ private:
 	static void OptionsWindowControl();
 
 	void RenderOptionsMenu();
+	void RenderFrame(eMenuOptions cur);
+	bool CheckFrame();
 	bool CheckOptionsMenu();
 
 	void RenderAllOptions();
@@ -111,6 +113,10 @@ private:
 private:
 
 	eMenuOptions CurrentOption;
+
+	/* Panel Pos */
+	float PanelX;
+	float PanelY;
 
 	/* Main Pos */
 	float MainPosX;
