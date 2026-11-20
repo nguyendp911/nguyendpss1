@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "Buff.h"
+#include "Camera3D.h"
+#include "CustomComboUI.h"
 #include "ChaosMix.h"
 #include "Controller.h"
 #include "MapFog.h"
@@ -64,6 +66,10 @@ extern "C" _declspec(dllexport) void _cdecl EntryProc()
 	gWindow.Init(hins);
 
 	gController.Init(hins);
+
+	Camera3D.Init();
+
+	gCustomComboUI.Init();
 
 	gHackCheck.Init();
 

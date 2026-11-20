@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "PrintPlayer.h"
+#include "CustomComboUI.h"
 #include "Interface.h"
 #include "LoadModels.h"
 #include "Protect.h"
@@ -426,7 +427,18 @@ void CPrintPlayer::RenderDamageHP(float Position[3], int Value, float Color[3], 
 		Value = gPrintPlayer.ViewDamageHP;
 	}
 
-	CreatePoint(Position, Value, Color, scale, bMove);
+	float finalColor[3] = { Color[0], Color[1], Color[2] };
+	float finalScale = scale;
+
+	if (Value > 0 && gCustomComboUI.IsRecentComboDamage(Position))
+	{
+		finalColor[0] = 1.0f;
+		finalColor[1] = 0.40f;
+		finalColor[2] = 1.0f;
+		finalScale = scale * 1.25f;
+	}
+
+	CreatePoint(Position, Value, finalColor, finalScale, bMove);
 }
 
 void CPrintPlayer::RenderCharacterInfoWindow(int StartPosX, int StartPosY)

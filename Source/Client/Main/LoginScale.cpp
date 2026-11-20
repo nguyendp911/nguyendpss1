@@ -121,6 +121,12 @@ static void _cdecl HookRenderTip(int sx, int sy, char* text)
 
 	if (was)
 	{
+		// Suppress ghost tooltip from the removed bottom-right Guild HUD button
+		if (sx >= 565 && sy >= 430)
+		{
+			return;
+		}
+
 		sy -= (int)HUD_SHIFT_Y;
 
 		g_HudShiftActive = false;
@@ -169,7 +175,17 @@ static void _cdecl HookRenderBitmap(int Texture, float x, float y, float Width, 
 
 	if (g_HudShiftActive)
 	{
-		y -= HUD_SHIFT_Y;
+		// Fullscreen Tarkan atmospheric sandstorm overlay (textures 0x494 / 0x495, originally 640x435):
+		// keep it unshifted at y = 0 and stretch to full 480 height so there is no dark seam across the HUD bar.
+		if ((Texture == 0x494 || Texture == 0x495) && Width >= 639.0f)
+		{
+			y = 0.0f;
+			Height = 480.0f;
+		}
+		else
+		{
+			y -= HUD_SHIFT_Y;
+		}
 	}
 	else if (g_InvScaleActive && Scale)
 	{

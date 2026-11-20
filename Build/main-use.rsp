@@ -4,6 +4,7 @@
 "Console.cpp"
 "Controller.cpp"
 "CustomBow.cpp"
+"CustomComboUI.cpp"
 "CustomGlow.cpp"
 "CustomItem.cpp"
 "CustomMonster.cpp"

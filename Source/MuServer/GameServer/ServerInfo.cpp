@@ -7,6 +7,7 @@
 #include "CustomNpcMove.h"
 #include "CustomPkFree.h"
 #include "CustomSafeZone.h"
+#include "CustomCombo.h"
 #include "CustomWing.h"
 #include "DefaultClassInfo.h"
 #include "DevilSquare.h"
@@ -176,6 +177,8 @@ void CServerInfo::ReadCustomInfo()
 	gPKFree.Load(gPath.GetFullPath("Custom\\CustomPkFree.txt"));
 
 	gSafeZone.Load(gPath.GetFullPath("Custom\\CustomSafeZone.txt"));
+
+	gCustomCombo.Load(gPath.GetFullPath("Custom\\CustomCombo.txt"));
 
 	LogAdd(LOG_BLUE, "[ServerInfo] Custom loaded successfully");
 }

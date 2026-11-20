@@ -1,7 +1,11 @@
 #include "stdafx.h"
 #include "Interface.h"
+#include "Buff.h"
+#include "Camera3D.h"
+#include "CustomComboUI.h"
 #include "LoginScale.h"
 #include "Camera3D.h"
+#include "CustomComboUI.h"
 #include "EventTimer.h"
 #include "LoadModels.h"
 #include "MiniMap.h"
@@ -137,18 +141,9 @@ static void RenderChatLogFrame()
 
 static void __fastcall ChatLogWindowRenderHook(void* pThis, void* /*edx*/)
 {
-	if (*(DWORD*)0x005590AC != 0)
-	{
-		((void(__thiscall*)(void*)) 0x00411920)(pThis);
-		return;
-	}
-
+	// Suppress the original MU chat frame, dark backdrop, scrollbar (vtbl +0x58) and F4 top-left log.
+	// Our Cold Steel floating chat pills are rendered cleanly in RenderFloatingChatLog().
 	g_ChatLogVisibleTick = GetTickCount();
-
-	// keep the frame / IME composition part of the original render (vtable +0x58)
-	DWORD* vtbl = *(DWORD**)pThis;
-
-	((void(__thiscall*)(void*)) vtbl[0x58 / 4])(pThis);
 }
 
 static void ChatTypeStyle(int type, DWORD* textColor, float* r, float* g, float* b)
@@ -178,7 +173,7 @@ static void ChatTypeStyle(int type, DWORD* textColor, float* r, float* g, float*
 
 static void RenderFloatingChatLog()
 {
-	if (*(DWORD*)0x005590AC != 0 || GetTickCount() - g_ChatLogVisibleTick > 250)
+	if (GetTickCount() - g_ChatLogVisibleTick > 250)
 	{
 		return;
 	}
@@ -388,9 +383,11 @@ static void _cdecl ChatInputButtonHook(int Texture, float x, float y, float Widt
 // ---------------------------------------------------------------------------------------------------------------------
 void HudBegin()
 {
+	glDisable(GL_FOG);
+
 	glEnable(GL_ALPHA_TEST);
 
-	glAlphaFunc(GL_GREATER, 0.05f);
+	glAlphaFunc(GL_GREATER, 0.15f);
 
 	glEnable(GL_BLEND);
 
@@ -562,11 +559,6 @@ static void _cdecl HudBarHook(int Texture, float x, float y, float Width, float 
 		HudSquare(1470.0f + 70.0f * i, 710.0f, 64.0f, 64.0f, bx[i], cy, 17.0f, asp);
 	}
 
-	// attack mode button
-	HudSprite(1470.0f, 570.0f, 339.0f, 128.0f, 578.0f, 412.0f, 58.0f, 29.0f);
-
-	HudSquare(1680.0f, 710.0f, 64.0f, 64.0f, 607.0f, 426.5f, 16.0f, asp);
-
 	HudEnd();
 
 	// hotkey letters
@@ -605,7 +597,12 @@ static void _cdecl HudUpdateHook()
 	// (only while no window is open: the windows' own hit tests are in plain coordinates)
 	const bool overSkillPopup = (!CheckRightInterfaces() && MouseX >= 250 && MouseX < 390 && MouseY >= 318 && MouseY < 396);
 
-	if (overSkillPopup || (MouseY >= 396 && MouseY < 480 && ((MouseX >= 170 && MouseX < 470) || (MouseX >= 570 && MouseX < 640))))
+	if (MouseX >= 570 && MouseX < 640 && MouseY >= 432 && MouseY < 480)
+	{
+		// Bottom-right Guild HUD button was removed: prevent ghost clicks on its original hitbox
+		MouseY = -100;
+	}
+	else if (overSkillPopup || (MouseY >= 396 && MouseY < 480 && MouseX >= 170 && MouseX < 470))
 	{
 		MouseY += (int)HUD_SHIFT_Y;
 	}
@@ -1076,6 +1073,12 @@ void Interface::Init()
 	// Cold Steel HUD
 	SetCompleteHook(0xE8, 0x00525CB9, &RenderInterfaceShifted);
 
+	// Extend Tarkan/underwater fullscreen RenderBitmapUV overlays (0x494/0x495) from 435.0f to full 480.0f height
+	SetDword(0x004BC032, FloatBits(480.0f));
+	SetDword(0x004BC07E, FloatBits(480.0f));
+	SetDword(0x004BC1A2, FloatBits(480.0f));
+	SetDword(0x004BC1EE, FloatBits(480.0f));
+
 	SetCompleteHook(0xE8, 0x004BD364, &HudBarHook);
 
 	SetCompleteHook(0xE8, 0x004BD602, &HudSkipHook);
@@ -1235,6 +1238,10 @@ void Interface::LoadImages()
 	}
 
 	gMiniMap.LoadImages();
+
+	Camera3D.LoadImages();
+
+	gCustomComboUI.LoadImages();
 }
 
 void Interface::MyUpdateWindowsMouse()
@@ -1258,6 +1265,10 @@ void Interface::MyUpdateWindowsMouse()
 
 	gMiniMap.UpdateMouse();
 
+	Camera3D.UpdateMouse();
+
+	gCustomComboUI.UpdateMouse();
+
 	gMoveList.UpdateMouse();
 
 	gEventTimer.UpdateMouse();
@@ -1268,6 +1279,12 @@ void Interface::MyRenderWindows()
 	((void(_cdecl*)()) 0x004C3530)();
 
 	gMiniMap.Render();
+
+	Camera3D.Render();
+
+	gCustomComboUI.Render();
+
+	gBuff.Render();
 
 	gMoveList.Render();
 

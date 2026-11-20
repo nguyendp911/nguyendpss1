@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Protocol.h"
+#include "CustomCombo.h"
 #include "Attack.h"
 #include "Blacklist.h"
 #include "BloodCastle.h"
@@ -544,6 +545,20 @@ void ProtocolCore(BYTE head, BYTE* lpMsg, int size, int aIndex, int encrypt, int
 				case 0x30:
 				{
 					CGOptionDataRecv((PMSG_OPTION_DATA_RECV*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0xEA:
+				{
+					gCustomCombo.CGComboTriggerRecv(aIndex);
+
+					break;
+				}
+
+				case 0xEC:
+				{
+					gCustomCombo.CGComboPKModeRecv(aIndex, (PMSG_CUSTOM_COMBO_PKMODE_SEND*)lpMsg);
 
 					break;
 				}
@@ -2188,6 +2203,8 @@ void GCNewCharacterInfoSend(LPOBJ lpObj)
 	pMsg.ViewGrandReset = (DWORD)(lpObj->GrandReset);
 
 	DataSend(lpObj->Index, (BYTE*)&pMsg, pMsg.header.size);
+
+	gCustomCombo.SendComboState(lpObj);
 
 #endif
 }

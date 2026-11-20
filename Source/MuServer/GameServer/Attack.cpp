@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Attack.h"
+#include "CustomCombo.h"
 #include "BattleSoccerManager.h"
 #include "CustomSafeZone.h"
 #include "CustomWing.h"
@@ -247,6 +248,17 @@ bool CAttack::Attack(LPOBJ lpObj, LPOBJ lpTarget, CSkill* lpSkill, bool send, in
 			{
 				damage = (damage * lpObj->DamageMultiplierRate) / 100;
 			}
+		}
+
+		int comboDamage = 0;
+
+		if (gCustomCombo.CheckCombo(lpObj, lpTarget, lpSkill, damage, &comboDamage, &effect))
+		{
+			damage = comboDamage;
+
+			effect |= 0x80;
+
+			gCustomCombo.SendComboEffect(lpObj, lpTarget);
 		}
 	}
 	else

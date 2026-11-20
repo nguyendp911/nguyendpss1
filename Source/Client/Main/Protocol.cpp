@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Protocol.h"
+#include "CustomComboUI.h"
 #include "ChaosMix.h"
 #include "EventTimer.h"
 #include "GoldenArcher.h"
@@ -448,6 +449,20 @@ bool CProtocol::TranslateProtocol(BYTE head, BYTE* lpMsg, int Size)
 				case 0xE6:
 				{
 					gEventTimer.GCEventTimeRecv((PMSG_EVENT_TIME_RECV*)lpMsg);
+
+					return true;
+				}
+
+				case 0xEA:
+				{
+					gCustomComboUI.GCComboStateRecv((PMSG_CUSTOM_COMBO_STATE_SEND*)lpMsg);
+
+					return true;
+				}
+
+				case 0xEB:
+				{
+					gCustomComboUI.GCComboEffectRecv((PMSG_CUSTOM_COMBO_EFFECT_SEND*)lpMsg);
 
 					return true;
 				}

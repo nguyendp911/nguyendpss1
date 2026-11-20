@@ -43,11 +43,17 @@ public:
 
         virtual ~CCamera3D();
 
+	void Init();
+
 	void Toggle();
 
 	void Restore();
 
 	void SetIsMove(bool IsMove);
+
+	bool IsEnabled() const { return this->m_Enable; }
+
+	bool GetIsMove() const { return this->m_IsMove; }
 
 	void SetCursorX(LONG CursorX);
 
@@ -59,9 +65,13 @@ public:
 
 	void SetDefaultValue();
 
-private:
+	void LoadImages();
 
-        void Init();
+	void Render();
+
+	void UpdateMouse();
+
+private:
 
 	void SetCurrentValue();
 
@@ -82,6 +92,8 @@ private:
 	CAMERA_ADDR m_Address;
 
 	CAMERA_INFO m_Default;
+
+	GLuint m_TexCameraCS;
 };
 
 extern CCamera3D Camera3D;

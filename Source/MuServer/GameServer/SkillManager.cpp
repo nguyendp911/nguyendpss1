@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "SkillManager.h"
+#include "CustomCombo.h"
 #include "Math.h"
 #include "Attack.h"
 #include "EffectManager.h"
@@ -480,6 +481,11 @@ bool CSkillManager::CheckSkillTarget(LPOBJ lpObj, int aIndex, int bIndex, int ty
 	}
 
 	if (gGuild.GuildWarStateCheck(lpObj, &gObj[SummonIndex]) != false)
+	{
+		return true;
+	}
+
+	if (gCustomCombo.IsPKMode(lpObj->Index) != false)
 	{
 		return true;
 	}

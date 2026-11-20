@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CommandManager.h"
+#include "CustomCombo.h"
 #include "BonusManager.h"
 #include "DSProtocol.h"
 #include "GameMain.h"
@@ -234,6 +235,12 @@ bool CCommandManager::ManagementCore(LPOBJ lpObj, char* message)
 	memset(command, 0, sizeof(command));
 
 	this->GetString(message, command, sizeof(command), 0);
+
+	if (_stricmp(command, "/combo") == 0)
+	{
+		gCustomCombo.CommandCombo(lpObj);
+		return true;
+	}
 
 	COMMAND_LIST CommandData;
 

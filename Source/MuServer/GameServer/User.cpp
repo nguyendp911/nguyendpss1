@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "User.h"
+#include "CustomCombo.h"
 #include "Attack.h"
 #include "BattleSoccerManager.h"
 #include "BloodCastle.h"
@@ -922,6 +923,8 @@ short gObjDel(int aIndex)
 	{
 		return -1;
 	}
+
+	gCustomCombo.ClearUser(aIndex);
 
 	if (MAP_RANGE(lpObj->Map) != 0)
 	{

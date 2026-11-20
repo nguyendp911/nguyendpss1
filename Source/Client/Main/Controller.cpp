@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Controller.h"
 #include "Camera3D.h"
+#include "CustomComboUI.h"
 #include "EventTimer.h"
 #include "MiniMap.h"
 #include "MoveList.h"
@@ -96,6 +97,46 @@ LRESULT Controller::Mouse(int nCode, WPARAM wParam, LPARAM lParam)
 				break;
 			}
 
+			case WM_MBUTTONDBLCLK:
+			{
+				if (GetForegroundWindow() == g_hWnd)
+				{
+					Camera3D.Restore();
+				}
+
+				break;
+			}
+
+			case WM_RBUTTONDOWN:
+			{
+				if (GetForegroundWindow() == g_hWnd)
+				{
+					if ((GetKeyState(VK_SHIFT) & 0x8000) != 0)
+					{
+						Camera3D.SetIsMove(true);
+
+						Camera3D.SetCursorX(HookStruct->pt.x);
+
+						Camera3D.SetCursorY(HookStruct->pt.y);
+					}
+				}
+
+				break;
+			}
+
+			case WM_RBUTTONUP:
+			{
+				if (GetForegroundWindow() == g_hWnd)
+				{
+					if (Camera3D.GetIsMove())
+					{
+						Camera3D.SetIsMove(false);
+					}
+				}
+
+				break;
+			}
+
 			case WM_MOUSEWHEEL:
 			{
 				if (GetForegroundWindow() == g_hWnd)
@@ -115,6 +156,33 @@ LRESULT Controller::Keyboard(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	if (nCode == HC_ACTION)
 	{
+		if (GetForegroundWindow() == g_hWnd)
+		{
+			if (wParam == 'C' && ((GetKeyState(VK_SHIFT) & 0x8000) != 0))
+			{
+				if (!CheckInputInterfaces())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gCustomComboUI.ToggleCombo();
+					}
+					return 1;
+				}
+			}
+
+			if (wParam == 'P' && ((GetKeyState(VK_SHIFT) & 0x8000) != 0))
+			{
+				if (!CheckInputInterfaces())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gCustomComboUI.TogglePKMode();
+					}
+					return 1;
+				}
+			}
+		}
+
 		if (((DWORD)lParam & (1 << 30)) != 0 && ((DWORD)lParam & (1 << 31)) != 0)
 		{
 			switch (wParam)

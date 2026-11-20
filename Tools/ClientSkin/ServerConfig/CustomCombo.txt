@@ -1,0 +1,90 @@
+; ==============================================================================
+;                      QUAN LY HE THONG COMBO ALL CLASS
+; ==============================================================================
+; Enable: 1 = Bat tinh nang, 0 = Tat
+; ActiveDuration: Thoi gian duy tri trang thai Combo sau khi bam nut (giay)
+; CooldownDuration: Thoi gian hoi chieu truoc khi duoc bam lai (giay)
+; DamageRatePvE: % sat thuong cong them khi xuat hien Combo danh Quai / Boss (mac dinh 200%)
+; DamageRatePvP: % sat thuong cong them khi xuat hien Combo danh Nguoi / Duel (mac dinh 50%)
+; ProcDelayMs: Gian cach toi thieu giua cac don Combo (mili giay, mac dinh 0ms)
+; PvPRequire3Skills: 1 = Bat buoc thuc hien dung chuoi 3 Skill khi PvP/Duel, 0 = 1 Skill
+; ==============================================================================
+[CustomCombo]
+Enable = 1
+ActiveDuration = 30
+CooldownDuration = 10
+DamageRatePvE = 200
+DamageRatePvP = 50
+DamageRate = 200
+ProcDelayMs = 0
+PvPRequire3Skills = 1
+
+; ==============================================================================
+; QUY DINH CHUOI 3 SKILL COMBO CHO TUNG CLASS
+; ------------------------------------------------------------------------------
+; - Khi PK nguoi choi hoac Thach dau (PvP):
+;     Bat buoc nguoi choi phai danh dung thu tu 3 ky nang (Skill 1 -> Skill 2 -> Skill 3).
+;     Khi ra don Skill 3, don Combo se no kem theo sat thuong mau tim da quang!
+;     (Luu y: Rieng DK Skill 1 ho tro tat ca cac chieu Vu khi: 18..23).
+; - Khi train Quai vat / Boss (PvE):
+;     Nguoi choi chi can su dung Skill 3 (hoac Skill chi dinh) de no combo lien tuc.
+; ------------------------------------------------------------------------------
+; Bang Ma ID Skill thong dung:
+;   Dark Wizard (DW):
+;       9  = Evil Spirit (Quay Rong)
+;       10 = Hell Fire (Mua Sao Bang)
+;       13 = Blast (Giat Sam)
+;       14 = Inferno (Vong Tron Lua)
+;
+;   Dark Knight (DK):
+;       19 = Falling Slash (Chem Vu Khi)
+;       22 = Cyclone (Chem Xoay Vu Khi)
+;       41 = Twisting Slash (Xoay Kiem)
+;       42 = Rageful Blow (Dia Loi)
+;       43 = Death Stab (Dam Gio)
+;       47 = Impale (Dam Ngua)
+;
+;   Fairy Elf (ELF):
+;       24 = Triple Shot (Ban Ngu Tien / 3 Tien)
+;       51 = Ice Arrow (Bang Tien)
+;       52 = Penetration (Xuyen Tam Tien)
+;
+;   Magic Gladiator (MG):
+;       41 = Twisting Slash (Xoay Kiem)
+;       55 = Fire Slash (Chem Lua)
+;       56 = Power Slash (Chem Bang Quet Kiem)
+;       9  = Evil Spirit (Quay Rong Phap Su)
+; ==============================================================================
+[ComboSkill]
+; --- Dark Wizard (DW - Class 0) ---
+Skill1_Class0 = 13    ; Blast (Giat Sam)
+Skill2_Class0 = 10    ; Hell Fire (Mua Sao Bang)
+Skill3_Class0 = 9     ; Evil Spirit (Quay Rong)
+SkillPvE_Class0 = -1  ; Skill PvE: -1 cho phep tat ca Skill DW (hoac doi thanh 9 de chi Quay Rong)
+
+; --- Dark Knight (DK - Class 1) ---
+Skill1_Class1 = 22    ; Falling Slash / Cyclone / Weapon Skill (18..23)
+Skill2_Class1 = 41    ; Twisting Slash (Xoay Kiem)
+Skill3_Class1 = 43    ; Death Stab (Dam Gio)
+SkillPvE_Class1 = -1  ; Skill PvE: -1 cho phep tat ca Skill DK (hoac doi thanh 41 de chi Xoay Kiem)
+
+; --- Fairy Elf (ELF - Class 2) ---
+Skill1_Class2 = 52    ; Penetration (Xuyen Tam Tien)
+Skill2_Class2 = 51    ; Ice Arrow (Bang Tien)
+Skill3_Class2 = 24    ; Triple Shot (Ban Ngu Tien)
+SkillPvE_Class2 = -1  ; Skill PvE: -1 cho phep tat ca Skill ELF (hoac doi thanh 24 de chi Ban Ngu Tien)
+
+; --- Magic Gladiator (MG - Class 3) ---
+Skill1_Class3 = 41    ; Twisting Slash (Xoay Kiem)
+Skill2_Class3 = 55    ; Fire Slash (Chem Lua)
+Skill3_Class3 = 56    ; Power Slash (Chem Bang)
+SkillPvE_Class3 = -1  ; Skill PvE: -1 cho phep tat ca cac Skill MG (Quay Rong 9, Xoay Kiem 41, Chem Lua 55, Chem Bang 56...)
+
+; ==============================================================================
+; BAT / TAT COMBO THEO CLASS (1 = Cho phep, 0 = Cam dung)
+; ==============================================================================
+[ComboClass]
+EnableClass0 = 1    ; Dark Wizard (DW)
+EnableClass1 = 1    ; Dark Knight (DK)
+EnableClass2 = 1    ; Fairy Elf (ELF)
+EnableClass3 = 1    ; Magic Gladiator (MG)
