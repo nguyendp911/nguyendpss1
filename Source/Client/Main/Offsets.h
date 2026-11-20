@@ -49,6 +49,7 @@
 #define OffsetWarehouseItems 0x07EA5B30
 #define OffsetInventoryItems 0x07EA8410
 #define GetInventoryItem(slot) (ITEM*)(OffsetInventoryItems + (sizeof(ITEM) * slot))
+#define GetEquipmentItem(slot) ((CharacterMachine) ? (ITEM*)(CharacterMachine + (536 + (sizeof(ITEM) * (slot)))) : (ITEM*)0)
 #define GetItemFromInventory(inventory, slot) (ITEM*)(inventory + (sizeof(ITEM) * slot))
 #define CreateGuildMark ((void(_cdecl*)(int nMarkIndex, bool blend)) 0x004F0100)
 #define RenderBoolean ((void(_cdecl*)(int x, int y, DWORD c)) 0x00480E00)

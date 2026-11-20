@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ItemManager.h"
+#include "Interface.h"
 #include "CustomBow.h"
 #include "CustomWing.h"
 #include "ItemStack.h"
@@ -638,4 +639,91 @@ int CItemManager::GetInventoryItemSlot(int index, int level)
 	}
 
 	return -1;
+}
+
+ITEM* CItemManager::GetHoveredItem(bool alreadyMapped)
+{
+	if (!InventoryOpened)
+	{
+		return nullptr;
+	}
+
+	int mx = MouseX;
+	int my = MouseY;
+
+	if (!alreadyMapped)
+	{
+		const float scaledBottom = INV_PIVOT_Y + 432.0f * INV_SCALE;
+		if ((float)my >= INV_PIVOT_Y && (float)my < scaledBottom)
+		{
+			mx = (int)(640.0f - (INV_PIVOT_X - (float)mx) / INV_SCALE);
+			my = (int)(((float)my - INV_PIVOT_Y) / INV_SCALE);
+		}
+	}
+
+	int InvX = *(int*)0x07EA5288;
+	int InvY = *(int*)0x07EA5284;
+
+	struct EQ_SLOT_RECT { int x; int y; int w; int h; };
+	static const EQ_SLOT_RECT eqRects[12] = {
+		{ 15, 40, 45, 60 },   // 0: Right Weapon
+		{ 130, 40, 45, 60 },  // 1: Left Weapon
+		{ 72, 40, 45, 40 },   // 2: Helm
+		{ 72, 80, 45, 40 },   // 3: Armor
+		{ 72, 120, 45, 40 },  // 4: Pants
+		{ 15, 100, 45, 40 },  // 5: Gloves
+		{ 130, 100, 45, 40 }, // 6: Boots
+		{ 130, 140, 45, 40 }, // 7: Wings
+		{ 15, 140, 45, 40 },  // 8: Helper
+		{ 72, 160, 25, 25 },  // 9: Amulet
+		{ 45, 160, 25, 25 },  // 10: Ring Right
+		{ 98, 160, 25, 25 }   // 11: Ring Left
+	};
+
+	for (int i = 0; i < 12; i++)
+	{
+		ITEM* pEq = GetEquipmentItem(i);
+		if (pEq && pEq->Type >= 0 && pEq->Type < MAX_ITEM)
+		{
+			int sx = InvX + eqRects[i].x;
+			int sy = InvY + eqRects[i].y;
+			if (mx >= sx && mx <= sx + eqRects[i].w &&
+			    my >= sy && my <= sy + eqRects[i].h)
+			{
+				return pEq;
+			}
+		}
+	}
+
+	int GridX = InvX + 15;
+	int GridY = InvY + 205;
+
+	for (int i = 0; i < 64; i++)
+	{
+		ITEM* pInv = GetInventoryItem(i);
+		if (pInv && pInv->Type >= 0 && pInv->Type < MAX_ITEM)
+		{
+			ITEM_ATTRIBUTE* pAttr = (ITEM_ATTRIBUTE*)(ItemAttribute + pInv->Type * sizeof(ITEM_ATTRIBUTE));
+			if (pAttr && pAttr->Width > 0 && pAttr->Height > 0)
+			{
+				int itemX = GridX + pInv->x * 20;
+				int itemY = GridY + pInv->y * 20;
+				int itemW = pAttr->Width * 20;
+				int itemH = pAttr->Height * 20;
+
+				if (mx >= itemX && mx <= itemX + itemW &&
+				    my >= itemY && my <= itemY + itemH)
+				{
+					return pInv;
+				}
+			}
+		}
+	}
+
+	if (pPickedItem && pPickedItem->Type >= 0 && pPickedItem->Type < MAX_ITEM)
+	{
+		return pPickedItem;
+	}
+
+	return nullptr;
 }

@@ -25,6 +25,8 @@ public:
 	int GetInventoryItemCount(int index, int level);
 
 	int GetInventoryItemSlot(int index, int level);
+
+	ITEM* GetHoveredItem(bool alreadyMapped = false);
 };
 
 extern CItemManager gItemManager;

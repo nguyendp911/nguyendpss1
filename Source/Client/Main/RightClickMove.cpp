@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "RightClickMove.h"
 #include "ItemManager.h"
+#include "ItemPost.h"
 #include "ItemStack.h"
 
 CRightClickMove gRightClickMove;
@@ -74,6 +75,22 @@ _declspec(naked) void CRightClickMove::CheckEquipItem()
 		Pushad;
 	}
 
+	if ((GetKeyState(VK_CONTROL) & 0x8000) != 0 || (GetKeyState(VK_SHIFT) & 0x8000) != 0)
+	{
+		ITEM* pHoverItem = gItemManager.GetHoveredItem(true);
+		if (pHoverItem && pHoverItem->Type >= 0 && pHoverItem->Type < MAX_ITEM)
+		{
+			MouseLButtonPush = false;
+			MouseRButtonPush = false;
+			gItemPost.OnItemClickWithModifier(pHoverItem);
+			_asm
+			{
+				Popad;
+				Jmp[ItemNotMoved];
+			}
+		}
+	}
+
 	if (pPickedItem)
 	{
 		if (pPickedItem->Part != 0xFF)
@@ -126,6 +143,25 @@ _declspec(naked) void CRightClickMove::CheckRighClickToPickItem()
 
 	SetByte(0x07EAA164, 1);
 
+	if ((MouseLButtonPush || MouseRButtonPush) &&
+		((GetKeyState(VK_CONTROL) & 0x8000) != 0 || (GetKeyState(VK_SHIFT) & 0x8000) != 0))
+	{
+		MouseLButtonPush = false;
+		MouseRButtonPush = false;
+
+		ITEM* pHoverItem = gItemManager.GetHoveredItem(true);
+		if (pHoverItem && pHoverItem->Type >= 0 && pHoverItem->Type < MAX_ITEM)
+		{
+			gItemPost.OnItemClickWithModifier(pHoverItem);
+		}
+
+		_asm
+		{
+			Popad;
+			Jmp[JmpOnNot];
+		}
+	}
+
 	if (!MouseLButtonPush && MouseRButtonPush)
 	{
 		goto Exit;
@@ -169,11 +205,14 @@ _declspec(naked) void CRightClickMove::CheckUnequipItem()
 	{
 		MouseRButtonPush = false;
 
-		ItemInfo = (ITEM_ATTRIBUTE*)(ItemAttribute + pPickedItem->Type * sizeof(ITEM_ATTRIBUTE));
+		if ((GetKeyState(VK_CONTROL) & 0x8000) == 0 && (GetKeyState(VK_SHIFT) & 0x8000) == 0)
+		{
+			ItemInfo = (ITEM_ATTRIBUTE*)(ItemAttribute + pPickedItem->Type * sizeof(ITEM_ATTRIBUTE));
 
-		target = gItemManager.GetInventoryEmptySlot(ItemInfo->Width, ItemInfo->Height);
+			target = gItemManager.GetInventoryEmptySlot(ItemInfo->Width, ItemInfo->Height);
 
-		SendRequestEquipmentItem(0, itemSlot, 0, target);
+			SendRequestEquipmentItem(0, itemSlot, 0, target);
+		}
 	}
 
 	_asm

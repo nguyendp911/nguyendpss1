@@ -10,9 +10,9 @@ public:
 
 	void Init();
 
-private:
-
 	static void ItemConvert(ITEM* ip, BYTE Attribute1, BYTE Attribute2);
+
+private:
 
 	static void InsertOptionText();
 

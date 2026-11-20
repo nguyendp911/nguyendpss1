@@ -21,14 +21,14 @@ struct PMSG_CHAT_RECV
 {
 	PBMSG_HEAD header; // C1:00
 	char name[10];
-	char message[60];
+	char message[140];
 };
 
 struct PMSG_CHAT_WHISPER_RECV
 {
 	PBMSG_HEAD header; // C1:00
 	char name[10];
-	char message[60];
+	char message[140];
 };
 
 struct PMSG_MAIN_CHECK_RECV
@@ -152,7 +152,7 @@ struct PMSG_CHAT_SEND
 {
 	PBMSG_HEAD header; // C1:00
 	char name[10];
-	char message[60];
+	char message[140];
 };
 
 struct PMSG_CHAT_TARGET_SEND
@@ -166,7 +166,7 @@ struct PMSG_CHAT_WHISPER_SEND
 {
 	PBMSG_HEAD header; // C1:02
 	char name[10];
-	char message[60];
+	char message[140];
 };
 
 struct PMSG_MAIN_CHECK_SEND

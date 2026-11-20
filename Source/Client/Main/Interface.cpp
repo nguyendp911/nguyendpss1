@@ -7,6 +7,7 @@
 #include "Camera3D.h"
 #include "CustomComboUI.h"
 #include "EventTimer.h"
+#include "ItemPost.h"
 #include "LoadModels.h"
 #include "MiniMap.h"
 #include "MoveList.h"
@@ -275,6 +276,31 @@ static void RenderFloatingChatLog()
 		SetTextColor = textColor;
 		SetBackgroundTextColor = 0x00000000;
 		RenderText((int)bx + 8, textY, line, 0, RT3_SORT_LEFT, NULL);
+
+		POST_CHAT_LINE post;
+		if (gItemPost.FindPostByText(strText, post) && !post.linkName.empty())
+		{
+			std::string lineStr(line);
+			size_t at = lineStr.find(post.linkName);
+			if (at != std::string::npos)
+			{
+				SIZE preSz = { 0, 0 };
+				if (at > 0)
+				{
+					GetTextExtentPoint32A(m_hFontDC, line, (int)at, &preSz);
+				}
+				SIZE lnkSz = { 0, 0 };
+				GetTextExtentPoint32A(m_hFontDC, post.linkName.c_str(), (int)post.linkName.length(), &lnkSz);
+
+				float preW = (WindowWidth > 0) ? ((float)preSz.cx * 640.0f / (float)WindowWidth) : (float)at * 5.0f;
+				float lnkW = (WindowWidth > 0) ? ((float)lnkSz.cx * 640.0f / (float)WindowWidth) : (float)post.linkName.length() * 5.0f;
+				float lx = bx + 8.0f + preW;
+
+				SetTextColor = 0xFFFFF040; // Bright Cold Steel Cyan RGB(64, 240, 255)
+				RenderText((int)lx, textY, post.linkName.c_str(), 0, RT3_SORT_LEFT, NULL);
+				gItemPost.RegisterRenderedPostItem((int)lx, (int)by, (int)lnkW, (int)bh, post.strHex);
+			}
+		}
 	}
 
 	SetTextColor = oldTextColor;
@@ -899,9 +925,16 @@ static void RenderExpPopups()
 
 static void __cdecl AddTextFilterHook(const char* strID, const char* strText, int MsgType)
 {
+	std::string cleanText;
+	const char* textToAdd = strText;
+	if (gItemPost.OnChatTextAdded(strID, strText, MsgType, cleanText))
+	{
+		textToAdd = cleanText.c_str();
+	}
+
 	if (g_pAddTextTrampoline)
 	{
-		((void(__cdecl*)(const char*, const char*, int))g_pAddTextTrampoline)(strID, strText, MsgType);
+		((void(__cdecl*)(const char*, const char*, int))g_pAddTextTrampoline)(strID, textToAdd, MsgType);
 	}
 }
 
@@ -1272,6 +1305,8 @@ void Interface::MyUpdateWindowsMouse()
 	gMoveList.UpdateMouse();
 
 	gEventTimer.UpdateMouse();
+
+	gItemPost.UpdateMouse();
 }
 
 void Interface::MyRenderWindows()
@@ -1289,6 +1324,8 @@ void Interface::MyRenderWindows()
 	gMoveList.Render();
 
 	gEventTimer.Render();
+
+	gItemPost.Render();
 }
 
 void Interface::RenderLeftDragon(int Texture, float x, float y, float Width, float Height, float u, float v, float uWidth, float vHeight, bool Scale, bool StartScale)

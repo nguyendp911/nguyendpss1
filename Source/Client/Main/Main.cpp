@@ -14,6 +14,7 @@
 #include "LoginScale.h"
 #include "Item.h"
 #include "ItemPosition.h"
+#include "ItemPost.h"
 #include "ItemStack.h"
 #include "ItemValue.h"
 #include "Language.h"
@@ -92,6 +93,8 @@ extern "C" _declspec(dllexport) void _cdecl EntryProc()
 	gSound.Init();
 
 	gInterface.Init();
+
+	gItemPost.Init();
 
 	gLoginScale.Init();
 

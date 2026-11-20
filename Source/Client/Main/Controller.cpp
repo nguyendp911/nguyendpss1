@@ -3,6 +3,8 @@
 #include "Camera3D.h"
 #include "CustomComboUI.h"
 #include "EventTimer.h"
+#include "ItemManager.h"
+#include "ItemPost.h"
 #include "MiniMap.h"
 #include "MoveList.h"
 #include "resource.h"
@@ -63,6 +65,25 @@ LRESULT Controller::Mouse(int nCode, WPARAM wParam, LPARAM lParam)
 
 		switch (wParam)
 		{
+			case WM_LBUTTONDOWN:
+			{
+				if (GetForegroundWindow() == g_hWnd)
+				{
+					if ((GetKeyState(VK_CONTROL) & 0x8000) != 0 || (GetKeyState(VK_SHIFT) & 0x8000) != 0)
+					{
+						ITEM* pHoverItem = gItemManager.GetHoveredItem(false);
+						if (pHoverItem && pHoverItem->Type >= 0 && pHoverItem->Type < MAX_ITEM)
+						{
+							MouseLButtonPush = false;
+							gItemPost.OnItemClickWithModifier(pHoverItem);
+							return 1;
+						}
+					}
+				}
+
+				break;
+			}
+
 			case WM_MOUSEMOVE:
 			{
 				if (GetForegroundWindow() == g_hWnd)
@@ -111,6 +132,17 @@ LRESULT Controller::Mouse(int nCode, WPARAM wParam, LPARAM lParam)
 			{
 				if (GetForegroundWindow() == g_hWnd)
 				{
+					if ((GetKeyState(VK_CONTROL) & 0x8000) != 0 || (GetKeyState(VK_SHIFT) & 0x8000) != 0)
+					{
+						ITEM* pHoverItem = gItemManager.GetHoveredItem(false);
+						if (pHoverItem && pHoverItem->Type >= 0 && pHoverItem->Type < MAX_ITEM)
+						{
+							MouseRButtonPush = false;
+							gItemPost.OnItemClickWithModifier(pHoverItem);
+							return 1;
+						}
+					}
+
 					if ((GetKeyState(VK_SHIFT) & 0x8000) != 0)
 					{
 						Camera3D.SetIsMove(true);

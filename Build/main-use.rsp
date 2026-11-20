@@ -25,6 +25,7 @@
 "Item.cpp"
 "ItemManager.cpp"
 "ItemOption.cpp"
+"ItemPost.cpp"
 "ItemStack.cpp"
 "ItemValue.cpp"
 "Language.cpp"
