@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ItemPosition.h"
+#include "Interface.h"
 #include "LoadModels.h"
 
 CItemPosition gItemPosition;
@@ -59,6 +60,14 @@ void CItemPosition::Init()
 
 void CItemPosition::MyRenderItem3D(float sx, float sy, float Width, float Height, int Type, int Level, int Option1, bool PickUp)
 {
+	if (g_InvScaleActive && !PickUp)
+	{
+		sx = INV_PIVOT_X - (640.0f - sx) * INV_SCALE;
+		sy = INV_PIVOT_Y + sy * INV_SCALE;
+		Width *= INV_SCALE;
+		Height *= INV_SCALE;
+	}
+
 	bool Success = false;
 
 	if ((!pPickedItem->Key || PickUp) && IsWorkZone((int)sx, (int)sy, (int)Width, (int)Height))
@@ -476,6 +485,11 @@ void CItemPosition::MyRenderObjectScreen(int Type, int ItemLevel, int Option1, f
 		}
 
 		float Scale = lpInfo->Scale;
+
+		if (g_InvScaleActive && !PickUp)
+		{
+			Scale *= INV_SCALE;
+		}
 
 		BMD_Animation(b, BoneTransform, ObjectSelect_AnimationFrame, ObjectSelect_PriorAnimationFrame, ObjectSelect_PriorAction, ObjectSelect_Angle, ObjectSelect_HeadAngle, false, false);
 

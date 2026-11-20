@@ -6,6 +6,7 @@
 #include "HackCheck.h"
 #include "HealthBar.h"
 #include "HWID.h"
+#include "Interface.h"
 #include "LoginRemember.h"
 #include "ItemManager.h"
 #include "ItemStack.h"
@@ -731,6 +732,13 @@ void CProtocol::GCBloodCastleRequiredLevelsRecv(PMSG_BLOOD_CASTLE_REQ_LEVELS_REC
 
 void CProtocol::GCRewardExperienceRecv(PMSG_REWARD_EXPERIENCE_RECV* lpMsg)
 {
+	DWORD exp = ((DWORD)lpMsg->experience[0] << 16) | (DWORD)lpMsg->experience[1];
+
+	if (exp > 0)
+	{
+		gInterface.AddExpPopup(exp);
+	}
+
 	gPrintPlayer.ViewDamageHP = lpMsg->ViewDamageHP;
 
 	gPrintPlayer.ViewExperience = lpMsg->ViewExperience;

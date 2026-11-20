@@ -15,11 +15,11 @@ CLoginRemember gLoginRemember;
 #define STORE_FILE ".\\LoginAccounts.dat"
 
 // frame-relative rectangles (units of the original 250x216 art)
-static const float AF_X0 = 86.0f, AF_Y0 = 74.0f, AF_X1 = 214.0f, AF_Y1 = 92.0f;     // account field
-static const float ARROW_X0 = 195.0f, ARROW_Y0 = 75.0f, ARROW_X1 = 213.0f, ARROW_Y1 = 91.0f;
-static const float CHK_X0 = 86.0f, CHK_Y0 = 122.0f, CHK_SIZE = 10.0f;                 // check box
-static const float CHK_HIT_X1 = 170.0f, CHK_HIT_Y0 = 120.0f, CHK_HIT_Y1 = 134.0f;     // box + label hit area
-static const float LIST_X0 = 86.0f, LIST_X1 = 214.0f, LIST_Y0 = 95.0f, ROW_H = 17.0f, LIST_PAD = 2.0f;
+static const float AF_X0 = 60.0f, AF_Y0 = 76.0f, AF_X1 = 190.0f, AF_Y1 = 91.0f;       // account field
+static const float ARROW_X0 = 173.0f, ARROW_Y0 = 76.5f, ARROW_X1 = 189.5f, ARROW_Y1 = 90.5f;
+static const float CHK_X0 = 60.0f, CHK_Y0 = 127.0f, CHK_SIZE = 8.5f;                  // check box
+static const float CHK_HIT_X1 = 138.0f, CHK_HIT_Y0 = 125.0f, CHK_HIT_Y1 = 138.0f;     // box + label hit area
+static const float LIST_X0 = 60.0f, LIST_X1 = 190.0f, LIST_Y0 = 92.5f, ROW_H = 15.0f, LIST_PAD = 2.0f;
 
 CLoginRemember::CLoginRemember()
 {
@@ -370,7 +370,7 @@ bool CLoginRemember::Update(float rx, float ry, bool click, int state)
 
 				if (row >= 0)
 				{
-					if (rx >= LIST_X1 - 20.0f)
+					if (rx >= LIST_X1 - 18.0f)
 					{
 						// delete this entry
 						for (int i = row; i < this->m_Count - 1; i++)
@@ -482,7 +482,7 @@ static void Text4(float rx, float ry, const char* text, float frameX, float fram
 
 	SetTextColor = color;
 
-	RenderText((int)(frameX + rx), (int)(frameY + ry), text, 0, 0, NULL);
+	RenderText((int)(frameX + rx + 0.5f), (int)(frameY + ry + 0.5f), text, 0, 0, NULL);
 
 	SetBackgroundTextColor = backupBg;
 
@@ -504,33 +504,33 @@ void CLoginRemember::Render(float frameX, float frameY, float rx, float ry, int 
 	}
 
 	{
-		float cx = (ARROW_X0 + ARROW_X1) * 0.5f + 0.3f;
+		float cx = (ARROW_X0 + ARROW_X1) * 0.5f;
 
 		float cy = (ARROW_Y0 + ARROW_Y1) * 0.5f;
 
 		for (int i = 0; i < 4; i++)
 		{
-			float half = 4.5f - i * 1.2f;
+			float half = 3.4f - i * 0.9f;
 
-			float y = this->m_Open ? (cy + 1.5f - i * 1.1f) : (cy - 2.2f + i * 1.1f);
+			float y = this->m_Open ? (cy + 1.2f - i * 0.95f) : (cy - 1.8f + i * 0.95f);
 
-			Fill4(cx - half, y, cx + half, y + 1.1f, frameX, frameY, ar, ag, ab, 1.0f);
+			Fill4(cx - half, y, cx + half, y + 0.95f, frameX, frameY, ar, ag, ab, 1.0f);
 		}
 	}
 
 	// --- remember check box
 	bool hotCheck = (state == 2 && this->InCheck(rx, ry));
 
-	Frame4(CHK_X0, CHK_Y0, CHK_X0 + CHK_SIZE, CHK_Y0 + CHK_SIZE, frameX, frameY, 0.8f, hotCheck ? 0.9f : 0.23f, hotCheck ? 0.91f : 0.27f, hotCheck ? 0.93f : 0.32f, 1.0f);
+	Frame4(CHK_X0, CHK_Y0, CHK_X0 + CHK_SIZE, CHK_Y0 + CHK_SIZE, frameX, frameY, 0.7f, hotCheck ? 0.9f : 0.24f, hotCheck ? 0.91f : 0.29f, hotCheck ? 0.93f : 0.34f, 1.0f);
 
-	Fill4(CHK_X0 + 0.8f, CHK_Y0 + 0.8f, CHK_X0 + CHK_SIZE - 0.8f, CHK_Y0 + CHK_SIZE - 0.8f, frameX, frameY, 0.05f, 0.07f, 0.09f, 1.0f);
+	Fill4(CHK_X0 + 0.7f, CHK_Y0 + 0.7f, CHK_X0 + CHK_SIZE - 0.7f, CHK_Y0 + CHK_SIZE - 0.7f, frameX, frameY, 0.05f, 0.07f, 0.09f, 1.0f);
 
 	if (this->m_Remember)
 	{
-		Fill4(CHK_X0 + 2.2f, CHK_Y0 + 2.2f, CHK_X0 + CHK_SIZE - 2.2f, CHK_Y0 + CHK_SIZE - 2.2f, frameX, frameY, ar, ag, ab, 1.0f);
+		Fill4(CHK_X0 + 1.8f, CHK_Y0 + 1.8f, CHK_X0 + CHK_SIZE - 1.8f, CHK_Y0 + CHK_SIZE - 1.8f, frameX, frameY, ar, ag, ab, 1.0f);
 	}
 
-	Text4(CHK_X0 + 15.0f, CHK_Y0 + 1.5f, "Remember me", frameX, frameY, Color4b(228, 233, 238, 255));
+	Text4(CHK_X0 + 12.5f, CHK_Y0 + 2.0f, "Remember me", frameX, frameY, Color4b(228, 233, 238, 255));
 
 	// --- list of saved accounts (drawn last, on top of the password field)
 	if (this->m_Open && this->m_Count > 0)
@@ -554,11 +554,11 @@ void CLoginRemember::Render(float frameX, float frameY, float rx, float ry, int 
 				Fill4(LIST_X0 + 1.0f, top, LIST_X0 + 2.2f, top + ROW_H, frameX, frameY, ar, ag, ab, 1.0f);
 			}
 
-			Text4(LIST_X0 + 7.0f, top + 2.0f, this->m_List[i].account, frameX, frameY, Color4b(228, 233, 238, 255));
+			Text4(LIST_X0 + 5.5f, top + 5.3f, this->m_List[i].account, frameX, frameY, Color4b(228, 233, 238, 255));
 
-			bool hotX = (i == hover && rx >= LIST_X1 - 20.0f);
+			bool hotX = (i == hover && rx >= LIST_X1 - 18.0f);
 
-			Text4(LIST_X1 - 13.0f, top + 2.0f, "x", frameX, frameY, hotX ? Color4b(217, 112, 127, 255) : Color4b(138, 149, 161, 255));
+			Text4(LIST_X1 - 12.0f, top + 5.3f, "x", frameX, frameY, hotX ? Color4b(217, 112, 127, 255) : Color4b(138, 149, 161, 255));
 		}
 	}
 }

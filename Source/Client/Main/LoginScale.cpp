@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "LoginScale.h"
 #include "LoginRemember.h"
+#include "Interface.h"
 #include <intrin.h>
 
 CLoginScale gLoginScale;
@@ -52,10 +53,10 @@ static const LAYOUT_RECT g_Old[4] =
 
 static const LAYOUT_RECT g_New[4] =
 {
-	{  86.0f,  74.0f, 214.0f,  92.0f },
-	{  86.0f,  98.0f, 214.0f, 116.0f },
-	{  70.0f, 142.0f, 180.0f, 164.0f },
-	{  90.0f, 170.0f, 160.0f, 190.0f },
+	{  60.0f,  76.0f, 190.0f,  91.0f },
+	{  60.0f, 105.0f, 190.0f, 120.0f },
+	{  60.0f, 147.0f, 121.0f, 162.0f },
+	{ 129.0f, 147.0f, 190.0f, 162.0f },
 };
 
 // Copies the first `stolen` bytes of `target` (whole instructions, position independent) and jumps back after them.
@@ -79,8 +80,105 @@ static void ScalePoint(float* x, float* y)
 	*y = gLoginScale.m_PivotY + (*y - gLoginScale.m_PivotY) * gLoginScale.m_Scale;
 }
 
+// Cold Steel HUD: while the bottom interface (Interface.cpp RenderInterfaceShifted) runs, every draw primitive is moved
+// HUD_SHIFT_Y units up. Done in the primitives themselves instead of a GL translation, which leaked into the windows.
+bool g_HudShiftActive = false;
+bool g_InvScaleActive = false;
+
+static inline float ScaleInvX(float x) { return INV_PIVOT_X - (640.0f - x) * INV_SCALE; }
+static inline float ScaleInvY(float y) { return INV_PIVOT_Y + y * INV_SCALE; }
+
+typedef void(_cdecl* RENDERCOLOR_T)(float x, float y, float width, float height);
+typedef void(_cdecl* RENDERTIP_T)(int sx, int sy, char* text);
+typedef void(_cdecl* INPUTBOX_T)(int x, int y, int index, int flag);
+
+static RENDERCOLOR_T g_OrigRenderColor = 0;
+static RENDERTIP_T g_OrigRenderTip = 0;
+static INPUTBOX_T g_OrigInputBox = 0;
+
+static void _cdecl HookRenderColor(float x, float y, float width, float height)
+{
+	if (g_HudShiftActive)
+	{
+		y -= HUD_SHIFT_Y;
+	}
+	else if (g_InvScaleActive)
+	{
+		x = ScaleInvX(x);
+		y = ScaleInvY(y);
+		width *= INV_SCALE;
+		height *= INV_SCALE;
+	}
+
+	g_OrigRenderColor(x, y, width, height);
+}
+
+// These two call lower level helpers that are not hooked, but RenderTipText also calls RenderColor: shift the argument once and
+// suspend the automatic shift while they run.
+static void _cdecl HookRenderTip(int sx, int sy, char* text)
+{
+	bool was = g_HudShiftActive;
+
+	if (was)
+	{
+		sy -= (int)HUD_SHIFT_Y;
+
+		g_HudShiftActive = false;
+	}
+
+	g_OrigRenderTip(sx, sy, text);
+
+	g_HudShiftActive = was;
+}
+
+static void _cdecl HookInputBoxEntry(int x, int y, int index, int flag)
+{
+	bool wasHud = g_HudShiftActive;
+	bool wasInv = g_InvScaleActive;
+
+	if (wasHud)
+	{
+		y -= (int)HUD_SHIFT_Y;
+
+		g_HudShiftActive = false;
+	}
+	else if (wasInv)
+	{
+		x = (int)ScaleInvX((float)x);
+		y = (int)ScaleInvY((float)y);
+
+		g_InvScaleActive = false;
+	}
+
+	g_OrigInputBox(x, y, index, flag);
+
+	g_HudShiftActive = wasHud;
+	g_InvScaleActive = wasInv;
+}
+
 static void _cdecl HookRenderBitmap(int Texture, float x, float y, float Width, float Height, float u, float v, float uWidth, float vHeight, bool Scale, bool StartScale)
 {
+	// Cold Steel HUD: the pressed-state icons of the three bottom buttons (party / character / inventory, 24x24, drawn over the
+	// bar at y ~452 in the original coordinates) are replaced by a highlight on the new buttons
+	if ((Texture == 236 || Texture == 237 || Texture == 238) && y >= 440.0f && y < 470.0f && x >= 335.0f && x < 440.0f)
+	{
+		HudButtonActive(x < 372.0f ? 0 : (x < 404.0f ? 1 : 2));
+
+		return;
+	}
+
+	if (g_HudShiftActive)
+	{
+		y -= HUD_SHIFT_Y;
+	}
+	else if (g_InvScaleActive && Scale)
+	{
+		x = ScaleInvX(x);
+		y = ScaleInvY(y);
+		Width *= INV_SCALE;
+		Height *= INV_SCALE;
+	}
+
 #ifdef BITMAP_TRACE
 	{
 		static DWORD lastCheck = 0;
@@ -141,13 +239,13 @@ static void _cdecl HookRenderBitmap(int Texture, float x, float y, float Width, 
 		{
 			const LAYOUT_RECT& n = (ret == 0x00521802) ? g_New[2] : g_New[3];
 
-			x = LOGIN_FRAME_X + n.x0 - 1.2f;
+			x = LOGIN_FRAME_X + n.x0;
 
-			y = (float)LOGIN_FRAME_Y + n.y0 - 2.2f;
+			y = (float)LOGIN_FRAME_Y + n.y0;
 
-			Width = (n.x1 - n.x0) + 2.4f;
+			Width = (n.x1 - n.x0);
 
-			Height = (n.y1 - n.y0) + 4.4f;
+			Height = (n.y1 - n.y0);
 		}
 
 		ScalePoint(&x, &y);
@@ -162,6 +260,11 @@ static void _cdecl HookRenderBitmap(int Texture, float x, float y, float Width, 
 
 static int _cdecl HookRenderText(int iPos_x, int iPos_y, const char* pszText, int iBoxWidth, int iSort, SIZE* lpTextSize)
 {
+	if (g_HudShiftActive)
+	{
+		iPos_y -= (int)HUD_SHIFT_Y;
+	}
+
 #ifdef BITMAP_TRACE
 	if (pszText && strstr(pszText, "test1mg: ") && GetFileAttributesA("trace.on") != INVALID_FILE_ATTRIBUTES)
 	{
@@ -178,32 +281,70 @@ static int _cdecl HookRenderText(int iPos_x, int iPos_y, const char* pszText, in
 
 	if (g_LoginActive)
 	{
-		int dx = 0;
+		DWORD ret = (DWORD)_ReturnAddress();
 
-		int dy = 0;
-
-		switch ((DWORD)_ReturnAddress())
+		if (ret == 0x0052176B || ret == 0x00521796)
 		{
-			case 0x0052176B: dx = 12; dy = 31; break;   // "Account"
+			// "Account" and "Password" labels positioned cleanly above their input boxes
+			const LAYOUT_RECT& n = (ret == 0x0052176B) ? g_New[0] : g_New[1];
 
-			case 0x00521796: dx = 12; dy = 33; break;   // "Password"
+			float x = LOGIN_FRAME_X + n.x0;
 
-			case 0x00521850: dx = -33; dy = 48; break; // "Connect"
+			float y = (float)LOGIN_FRAME_Y + n.y0 - 7.2f;
 
-			case 0x005218FD: dx = 2; dy = -10; break;  // "Exit"
+			ScalePoint(&x, &y);
+
+			iPos_x = (int)(x + 0.5f);
+
+			iPos_y = (int)(y + 0.5f);
+
+			iBoxWidth = (int)(iBoxWidth * gLoginScale.m_Scale);
 		}
+		else if (ret == 0x00521850 || ret == 0x005218FD)
+		{
+			// "Connect" (orig center 357) and "Exit" (orig center 319): exact visual centering inside each button
+			bool isConnect = (ret == 0x00521850);
 
-		float x = (float)(iPos_x + dx);
+			const LAYOUT_RECT& n = isConnect ? g_New[2] : g_New[3];
 
-		float y = (float)(iPos_y + dy);
+			float halfW = (isConnect ? 357.0f : 319.0f) - (float)iPos_x;
 
-		ScalePoint(&x, &y);
+			float sx = LOGIN_FRAME_X + 0.5f * (n.x0 + n.x1);
 
-		iPos_x = (int)x;
+			float sy = (float)LOGIN_FRAME_Y + 0.5f * (n.y0 + n.y1);
 
-		iPos_y = (int)y;
+			ScalePoint(&sx, &sy);
 
-		iBoxWidth = (int)(iBoxWidth * gLoginScale.m_Scale);
+			iPos_x = (int)(sx - halfW + 0.5f);
+
+			iPos_y = (int)(sy - 2.6f + 0.5f);
+
+			iBoxWidth = (int)(iBoxWidth * gLoginScale.m_Scale);
+		}
+		else
+		{
+			float x = (float)iPos_x;
+
+			float y = (float)iPos_y;
+
+			ScalePoint(&x, &y);
+
+			iPos_x = (int)(x + 0.5f);
+
+			iPos_y = (int)(y + 0.5f);
+
+			iBoxWidth = (int)(iBoxWidth * gLoginScale.m_Scale);
+		}
+	}
+
+	if (g_InvScaleActive)
+	{
+		iPos_x = (int)ScaleInvX((float)iPos_x);
+		iPos_y = (int)ScaleInvY((float)iPos_y);
+		if (iBoxWidth > 0)
+		{
+			iBoxWidth = (int)((float)iBoxWidth * INV_SCALE);
+		}
 	}
 
 	return g_OrigRenderText(iPos_x, iPos_y, pszText, iBoxWidth, iSort, lpTextSize);
@@ -215,15 +356,17 @@ static void _cdecl HookInputBox(int x, int y, int index, int flag)
 {
 	if (g_LoginActive)
 	{
-		float fx = (float)(x - 5);                   // start inside the new field plate, clear of its end ornament
+		const LAYOUT_RECT& n = g_New[(index == 0) ? 0 : 1];
 
-		float fy = (float)(y + (index == 0 ? 31 : 33));
+		float fx = LOGIN_FRAME_X + n.x0 + 5.5f;
+
+		float fy = (float)LOGIN_FRAME_Y + 0.5f * (n.y0 + n.y1);
 
 		ScalePoint(&fx, &fy);
 
-		x = (int)fx;
+		x = (int)(fx + 0.5f);
 
-		y = (int)fy;
+		y = (int)(fy - 2.6f + 0.5f);
 	}
 
 	((void(_cdecl*)(int, int, int, int)) 0x0047F0B0)(x, y, index, flag);
@@ -381,11 +524,11 @@ __declspec(naked) static void EndLoginWindow()
 
 CLoginScale::CLoginScale()
 {
-	this->m_Scale = 1.3f;
+	this->m_Scale = 1.18f;
 
 	this->m_PivotX = 320.0f;
 
-	this->m_PivotY = 468.0f;
+	this->m_PivotY = 460.0f;
 }
 
 void CLoginScale::Init()
@@ -395,6 +538,18 @@ void CLoginScale::Init()
 	g_OrigRenderBitmap = (RENDERBITMAP_T)MakeTrampoline(0x005125A0, 7);   // mov al,[esp+2C] ; sub esp,48
 
 	g_OrigRenderText = (RENDERTEXT_T)MakeTrampoline(0x0047F650, 5);       // mov eax,[esp+18] ; push esi
+
+	g_OrigRenderColor = (RENDERCOLOR_T)MakeTrampoline(0x005124C0, 6);   // sub esp,28 ; push ebx ; push esi ; push edi
+
+	g_OrigRenderTip = (RENDERTIP_T)MakeTrampoline(0x0047F7F0, 8);       // sub esp,18 ; mov eax,[55CA00C]
+
+	g_OrigInputBox = (INPUTBOX_T)MakeTrampoline(0x0047F0B0, 6);         // sub esp,100
+
+	SetCompleteHook(0xE9, 0x005124C0, &HookRenderColor);
+
+	SetCompleteHook(0xE9, 0x0047F7F0, &HookRenderTip);
+
+	SetCompleteHook(0xE9, 0x0047F0B0, &HookInputBoxEntry);
 
 	SetCompleteHook(0xE9, 0x005125A0, &HookRenderBitmap);
 

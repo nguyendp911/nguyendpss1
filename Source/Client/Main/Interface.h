@@ -28,6 +28,19 @@ enum ObjectID
 
 };
 
+// Cold Steel HUD helpers (Interface.cpp). Coordinates are FINAL screen units (the original code runs HUD_SHIFT_Y units lower).
+extern bool g_HudShiftActive; // LoginScale.cpp: the bottom interface is being drawn / updated HUD_SHIFT_Y units higher
+extern bool g_InvScaleActive; // LoginScale.cpp: the inventory window (V) is being scaled down above the HUD
+#define INV_SCALE 0.82f
+#define INV_PIVOT_X 636.0f
+#define INV_PIVOT_Y 20.0f
+void HudSprite(float ax, float ay, float aw, float ah, float x, float y, float w, float h);
+void HudBegin();
+void HudEnd();
+void HudDrawExpBar(float frac, float* hx, float* hy, float* hw, float* hh);
+void HudDrawAgBar(float frac);
+void HudButtonActive(int index);
+
 class Interface
 {
 public:
@@ -37,6 +50,8 @@ public:
 	virtual ~Interface();
 
 	void Init();
+
+	void AddExpPopup(DWORD exp);
 
 private:
 

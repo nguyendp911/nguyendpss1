@@ -1249,7 +1249,7 @@ void COptionsMenu::ApplyAntilagDefaults()
 
 		SetByte(0x00525CB5, 0x75); // Skip Render Interface
 
-		SetDword(0x00525B69, 0x1B0); // Height for BeginOpengl
+		SetDword(0x00525B69, 0x1E0); // Height for BeginOpengl (full screen: the Cold Steel HUD is drawn over the world)
 
 		SetByte(0x0047FCE0, 0x83); // Skip Render Notices
 	}
@@ -1785,7 +1785,7 @@ bool COptionsMenu::CheckDeleteInterface(int PosX, int PosY)
 
 				SetByte(0x00525CB5, 0x75); // Skip Render Interface
 
-				SetDword(0x00525B69, 0x1B0); // Height for BeginOpengl
+				SetDword(0x00525B69, 0x1E0); // Height for BeginOpengl (full screen: the Cold Steel HUD is drawn over the world)
 
 				SetByte(0x0047FCE0, 0x83); // Skip Render Notices
 			}

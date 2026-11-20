@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "PrintPlayer.h"
+#include "Interface.h"
 #include "LoadModels.h"
 #include "Protect.h"
 #include "ServerList.h"
@@ -121,36 +122,112 @@ void CPrintPlayer::Init()
 	SetCompleteHook(0xE9, 0x004ECC60, &this->RenderCharacterInfoWindow); // Character Info Window
 }
 
+// Cold Steel orbs (see launcher\make_hud.py): atlas 233 = 2048x1024, native pack sprites:
+//   frame_left (0,0,279,291)   frame_right (300,0,281,292)   backing (600,0,231,236)
+//   glass (0,310,230,232)      fill_hp (260,310,235,237)     fill_mp (520,310,234,238)
+// The ring hole is centred at (142,146) in frame_left and (137,146.5) in frame_right. Layers: backing, fill clipped from the
+// top by the missing percentage, glass, frame. Coordinates are FINAL screen units; the shift is added when drawing.
+#define EXP_NUMBER_X 322.0f
+#define ORB_RING_H 96.0f
+#define ORB_TOP 384.0f
+#define ORB_CX_HP 130.0f
+#define ORB_CX_MP 510.0f
+#define ORB_LAYER_SCALE 0.74f
+
+static void OrbDraw(float ax, float ay, float aw, float ah, float cx, float cy, float s, float sx, float k, float frac, bool ring, float hx, float hy)
+{
+	float w, h, x, y;
+
+	if (ring)
+	{
+		w = aw * sx;
+		h = ah * s;
+		x = cx - hx * sx;
+		y = cy - hy * s;
+
+		HudSprite(ax, ay, aw, ah, x, y, w, h);
+
+		return;
+	}
+
+	w = aw * k * sx;
+	h = ah * k * s;
+	x = cx - w / 2.0f;
+	y = cy - h / 2.0f;
+
+	if (frac <= 0.0f)
+	{
+		return;
+	}
+
+	if (frac < 1.0f)
+	{
+		float cut = (1.0f - frac) * h;
+
+		RenderBitmap(233, x, y + cut + HUD_SHIFT_Y, w, h - cut, ax / HUD_ATLAS_W, (ay + (1.0f - frac) * ah) / HUD_ATLAS_H, aw / HUD_ATLAS_W, (frac * ah) / HUD_ATLAS_H, true, true);
+	}
+	else
+	{
+		HudSprite(ax, ay, aw, ah, x, y, w, h);
+	}
+}
+
 void CPrintPlayer::RenderCircleHPMP(int Texture, float x, float y, float Width, float Height, float u, float v, float uWidth, float vHeight, bool Scale, bool StartScale)
 {
-	float HP = (float)(gPrintPlayer.ViewMaxHP - gPrintPlayer.ViewCurHP) / (float)gPrintPlayer.ViewMaxHP;
+	const bool isMP = (Texture == 0xEB);
 
-	float MP = (float)(gPrintPlayer.ViewMaxMP - gPrintPlayer.ViewCurMP) / (float)gPrintPlayer.ViewMaxMP;
+	float cur = (float)(isMP ? gPrintPlayer.ViewCurMP : gPrintPlayer.ViewCurHP);
 
-	y = ((Texture == 0xEB) ? MP : HP) * 48.0f + 432.0f;
+	float max = (float)(isMP ? gPrintPlayer.ViewMaxMP : gPrintPlayer.ViewMaxHP);
 
-	Height = 48.0f - ((Texture == 0xEB) ? MP : HP) * 48.0f;
+	float frac = (max > 0.0f) ? (cur / max) : 0.0f;
 
-	v = ((Texture == 0xEB) ? MP : HP) * 48.0f / 64.0f;
+	frac = (frac < 0.0f) ? 0.0f : ((frac > 1.0f) ? 1.0f : frac);
 
-	vHeight = (1.0f - ((Texture == 0xEB) ? MP : HP)) * 48.0f / 64.0f;
+	// keep the orbs round whatever the window shape is (units are stretched by the screen rates)
+	float asp = (g_fScreenRate_x > 0.0f) ? (g_fScreenRate_y / g_fScreenRate_x) : 1.0f;
 
-	return RenderBitmap(Texture, x, y, Width, Height, u, v, uWidth, vHeight, Scale, StartScale);
+	const float s = ORB_RING_H / 291.0f; // units per atlas pixel (vertical)
+
+	const float sx = s * asp; // units per atlas pixel (horizontal)
+
+	const float cx = isMP ? ORB_CX_MP : ORB_CX_HP;
+
+	const float cy = ORB_TOP + 146.0f * s;
+
+	HudBegin();
+
+	OrbDraw(600.0f, 0.0f, 231.0f, 236.0f, cx, cy, s, sx, ORB_LAYER_SCALE, 1.0f, false, 0, 0); // backing
+
+	if (isMP)
+	{
+		OrbDraw(520.0f, 310.0f, 234.0f, 238.0f, cx, cy, s, sx, ORB_LAYER_SCALE, frac, false, 0, 0); // fill
+	}
+	else
+	{
+		OrbDraw(260.0f, 310.0f, 235.0f, 237.0f, cx, cy, s, sx, ORB_LAYER_SCALE, frac, false, 0, 0); // fill
+	}
+
+	OrbDraw(0.0f, 310.0f, 230.0f, 232.0f, cx, cy, s, sx, ORB_LAYER_SCALE, 1.0f, false, 0, 0); // glass
+
+	if (isMP)
+	{
+		OrbDraw(300.0f, 0.0f, 281.0f, 292.0f, cx, cy, s, sx, 0.0f, 1.0f, true, 137.0f, 146.5f); // frame
+	}
+	else
+	{
+		OrbDraw(0.0f, 0.0f, 279.0f, 291.0f, cx, cy, s, sx, 0.0f, 1.0f, true, 142.0f, 146.0f); // frame
+	}
+
+	HudEnd();
 }
 
 void CPrintPlayer::RenderCircleAG(int Texture, float x, float y, float Width, float Height, float u, float v, float uWidth, float vHeight, bool Scale, bool StartScale)
 {
-	float BP = (float)(gPrintPlayer.ViewMaxBP - gPrintPlayer.ViewCurBP) / (float)gPrintPlayer.ViewMaxBP;
+	float BP = (gPrintPlayer.ViewMaxBP > 0) ? ((float)gPrintPlayer.ViewCurBP / (float)gPrintPlayer.ViewMaxBP) : 0.0f;
 
-	y = BP * 36.0f + 438.0f;
-
-	Height = 36.0f - BP * 36.0f;
-
-	v = BP * 36.0f / 64.0f;
-
-	vHeight = (1.0f - BP) * 36.0f / 64.0f;
-
-	return RenderBitmap(Texture, x, y, Width, Height, u, v, uWidth, vHeight, Scale, StartScale);
+	// horizontal bar in the lower row of the hotbar frame (the old vertical gauge is gone)
+	HudDrawAgBar(BP);
 }
 
 void CPrintPlayer::RenderTextHP(char* Dest, char* Format)
@@ -160,7 +237,15 @@ void CPrintPlayer::RenderTextHP(char* Dest, char* Format)
 
 float CPrintPlayer::RenderNumberHP(float x, float y, int Num, float Width, float Height)
 {
-	return RenderNumber2D(x, y, gPrintPlayer.ViewCurHP, 9.0f, 10.0f);
+	int digits = 1;
+
+	for (DWORD n = gPrintPlayer.ViewCurHP; n >= 10; n /= 10)
+	{
+		digits++;
+	}
+
+	// RenderNumber2D takes the centre of the number (minus ~4): centred inside the HP orb, near its bottom
+	return RenderNumber2D(ORB_CX_HP + 4.0f, 444.0f + HUD_SHIFT_Y, gPrintPlayer.ViewCurHP, 9.0f, 10.0f);
 }
 
 void CPrintPlayer::RenderTextMP(char* Dest, char* Format)
@@ -170,7 +255,15 @@ void CPrintPlayer::RenderTextMP(char* Dest, char* Format)
 
 float CPrintPlayer::RenderNumberMP(float x, float y, int Num, float Width, float Height)
 {
-	return RenderNumber2D(x - 20, y, gPrintPlayer.ViewCurMP, 9.0f, 10.0f);
+	int digits = 1;
+
+	for (DWORD n = gPrintPlayer.ViewCurMP; n >= 10; n /= 10)
+	{
+		digits++;
+	}
+
+	// centred inside the MP orb, near its bottom
+	return RenderNumber2D(ORB_CX_MP + 4.0f, 444.0f + HUD_SHIFT_Y, gPrintPlayer.ViewCurMP, 9.0f, 10.0f);
 }
 
 void CPrintPlayer::RenderTextBP(char* Dest, char* Format)
@@ -180,7 +273,7 @@ void CPrintPlayer::RenderTextBP(char* Dest, char* Format)
 
 float CPrintPlayer::RenderNumberBP(float x, float y, int Num, float Width, float Height)
 {
-	return RenderNumber2D(x, y, gPrintPlayer.ViewCurBP, 9.0f, 10.0f);
+	return RenderNumber2D(440.0f, 447.0f + HUD_SHIFT_Y, gPrintPlayer.ViewCurBP, 7.0f, 8.0f);
 }
 
 void CPrintPlayer::RenderExperience()
@@ -212,38 +305,28 @@ void CPrintPlayer::RenderExperience()
 
 	int Number = (int)NumberBarRate;
 
-	float Width = (NumberBarRate - (float)Number) * 198.0f;
+	float hx, hy, hw, hh;
 
-	int Height = 4;
-
-	int X = 221;
-
-	int Y = 439;
-
-	glColor3f(0.92f, 0.8f, 0.34f);
-
-	RenderColor((float)X, (float)Y, Width, (float)Height);
+	HudDrawExpBar(NumberBarRate - (float)Number, &hx, &hy, &hw, &hh);
 
 	EnableAlphaTest(true);
 
 	glColor3f(0.91f, 0.81f, 0.6f);
 
-	// experience bar number
-	RenderNumber2D(425.0f, 434.0f, Number, 9.0f, 10.0f);
+	// experience bar number (tens of percent), right after the bar
+	RenderNumber2D(EXP_NUMBER_X, 447.0f + HUD_SHIFT_Y, Number, 7.0f, 8.0f);
 
 	DisableAlphaBlend();
 
 	glColor3f(1.0f, 1.0f, 1.0f);
 
-	Width = 198.0f;
-
-	if (IsWorkZone(X, Y, (int)Width, Height))
+	if (IsWorkZone((int)hx, (int)hy, (int)hw, (int)hh))
 	{
 		char strTipText[256];
 
 		sprintf_s(strTipText, sizeof(strTipText), GlobalText[201], gPrintPlayer.ViewExperience, gPrintPlayer.ViewNextExperience); // text.bmd 201: "Exp: %u/%u"
 
-		RenderTipText(X + 2, Y - 15, strTipText);
+		RenderTipText((int)hx + 2, (int)hy - 15, strTipText);
 	}
 }
 

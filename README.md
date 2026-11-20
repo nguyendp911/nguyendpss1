@@ -66,14 +66,13 @@ Launcher gọi `mariadb.exe`/`mariadb-dump.exe` với file `mariadb\mu.cnf` (use
 
 ## Giao diện client (Main.dll)
 
-Giao diện đăng nhập và các bảng trong game được vẽ lại theo phong cách phẳng ("digital"):
+Giao diện đăng nhập và HUD trong game được thiết kế lại theo phong cách Cold Steel phẳng ("digital"):
 
-- **Đăng nhập** (`LoginScale.cpp`, `LoginRemember.cpp`): form thu gọn ở giữa màn hình, ô "Remember me", danh sách tài khoản đã lưu
-  (mã hóa DPAPI, file `LoginAccounts.dat` cạnh client). Chọn server có khoảng cách giữa nút nhóm và danh sách (`ServerList.cpp`).
+- **Đăng nhập** (`LoginScale.cpp`, `LoginRemember.cpp`): form thu gọn giữa màn hình với nhãn `Account` / `Password` đặt phía trên ô nhập, nút `Connect` / `Exit` gọn ngang hàng, ô "Remember me", danh sách tài khoản đã lưu (mã hóa DPAPI, file `LoginAccounts.dat` cạnh client). Chọn server có khoảng cách giữa nút nhóm và danh sách (`ServerList.cpp`).
+- **Cold Steel Combat HUD** (`Interface.cpp`, `PrintPlayer.cpp`): thanh HUD phía dưới với cầu HP/MP, thanh EXP/AG, phím tắt kỹ năng dùng icon độ nét cao (`SkillHD.png` có mipmap), và cửa sổ bên phải (`V`, `C`, `P`, `G` kèm Shop/Warehouse/Trade/ChaosMix) tự động thu tỷ lệ gọn phía trên HUD kèm đồng bộ tọa độ chuột và vật phẩm 3D (`ItemPosition.cpp`, `LoginScale.cpp`).
+- **Minimap Cold Steel** (`MiniMap.cpp`): đặt góc trên bên phải với khung `MiniMapCS.png`, bảng tọa độ, nút thu gọn/phóng to/thu nhỏ và tooltip cổng dịch chuyển.
+- **Chat, Thông báo & EXP nổi** (`Interface.cpp`, `Protocol.cpp`): nhật ký chat dạng thẻ nổi góc dưới trái tự ẩn sau 8 giây, thông báo đầu màn hình đồng bộ màu theo loại tin, và số `+EXP` bay nổi trên đầu nhân vật.
 - **Menu Esc / Options** (`OptionsMenu.cpp`): một cửa sổ có sidebar (General, Antilag, Screen, Font, Close), độ phân giải xếp 2 cột, nút mũi tên phẳng.
 - **Event Timer (H) / Teleport (M)** (`EventTimer.cpp`, `MoveList.cpp`): bảng phẳng, nút Close, hàng sáng khi rê chuột.
-- **Chat** (`Interface.cpp`): khung chat ở góc dưới trái, khung nhập chat phẳng (ô chat, ô thì thầm, nút gửi) ngay bên dưới.
-  Khung nền chỉ hiện khi đang mở ô nhập chat. Vị trí chỉnh bằng `CHAT_LOG_POS_X/Y`, `CHAT_INPUT_Y`, `CHAT_LOG_WIDTH`.
 
-Ảnh skin được sinh bằng `Tools/ClientSkin` (`make_skin7.py` cho màn hình đăng nhập, `make_menu_skin.py` cho menu Esc và hộp thoại;
-cần Pillow). Build bình thường bằng `Build/build-main.bat`; `Build/build-main-trace.bat` bật `BITMAP_TRACE` để ghi lại các lệnh vẽ khi cần dò vị trí giao diện.
+Ảnh skin được sinh bằng `Tools/ClientSkin` (`make_skin7.py` cho màn hình đăng nhập, `make_hud.py` cho atlas HUD Cold Steel `Menu04.ozt`, `make_menu_skin.py` cho menu Esc và hộp thoại; cần Pillow). Các asset PNG đi kèm nằm ở `Tools/ClientSkin/Assets/` (`MiniMapCS.png`, `SkillHD.png` — chép vào `Client\Data\Interface\`). Build bình thường bằng `Build/build-main.bat`; `Build/build-main-trace.bat` bật `BITMAP_TRACE` để ghi lại các lệnh vẽ khi cần dò vị trí giao diện.

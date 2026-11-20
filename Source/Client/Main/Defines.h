@@ -4,6 +4,12 @@
 
 #define Clamp(value, min, max) ((value < min) ? min : (value > max) ? max : value)
 
+/* HUD: the whole bottom interface is drawn HUD_SHIFT_Y units higher than the original client does, the Cold Steel art is in
+   texture 233 (Menu04.ozt, atlas 2048x1024, see launcher\make_hud.py) */
+#define HUD_SHIFT_Y 40.0f
+#define HUD_ATLAS_W 2048.0f
+#define HUD_ATLAS_H 1024.0f
+
 /* VIEWPORT */
 #define MAX_MAIN_VIEWPORT 400
 #define REAL_WIDTH(width) ((width) * WindowWidth / 640)

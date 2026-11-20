@@ -12,17 +12,17 @@ DST = r"C:\Muemu\Client\Data\Logo"
 FONTS = r"C:\Windows\Fonts"
 S = 4  # pixels per design unit (4x keeps the original UV mapping)
 
-PANEL = (14, 40, 236, 200)
-FIELDS = [(86, 74, 214, 92), (86, 98, 214, 116)]
-CONNECT = (70, 142, 180, 164)
-EXIT = (90, 170, 160, 190)
-PAD = (1.2, 2.2)
-FIELD_PAD = (1.5, 2.4)
+PANEL = (47, 42, 203, 176)
+FIELDS = [(60, 76, 190, 91), (60, 105, 190, 120)]
+CONNECT = (60, 147, 121, 162)
+EXIT = (129, 147, 190, 162)
+PAD = (0.0, 0.0)
+FIELD_PAD = (0.0, 0.0)
 
-C_PANEL = (23, 28, 33)
-C_FIELD = (13, 17, 21)
-C_LINE = (59, 70, 81)
-C_LINE_DIM = (43, 51, 59)
+C_PANEL = (21, 26, 31)
+C_FIELD = (12, 16, 20)
+C_LINE = (62, 74, 86)
+C_LINE_DIM = (48, 58, 68)
 C_ACCENT = (111, 182, 196)
 C_INK = (228, 233, 238)
 
@@ -61,20 +61,24 @@ def login_frame():
     d = ImageDraw.Draw(img)
 
     rect(d, PANEL, C_PANEL + (244,), C_LINE + (255,), 0.5)
-    # two accent corner marks, like the demo
+    # refined Cold Steel accent corner marks
     x0, y0, x1, y1 = PANEL
-    d.rectangle([u(x0 - 0.3), u(y0 - 0.3), u(x0 + 10), u(y0 + 1.5)], fill=C_ACCENT + (255,))
-    d.rectangle([u(x0 - 0.3), u(y0 - 0.3), u(x0 + 1.5), u(y0 + 10)], fill=C_ACCENT + (255,))
-    d.rectangle([u(x1 - 10), u(y1 - 1.5), u(x1 + 0.3), u(y1 + 0.3)], fill=C_ACCENT + (255,))
-    d.rectangle([u(x1 - 1.5), u(y1 - 10), u(x1 + 0.3), u(y1 + 0.3)], fill=C_ACCENT + (255,))
+    d.rectangle([u(x0 - 0.3), u(y0 - 0.3), u(x0 + 8.0), u(y0 + 1.2)], fill=C_ACCENT + (255,))
+    d.rectangle([u(x0 - 0.3), u(y0 - 0.3), u(x0 + 1.2), u(y0 + 8.0)], fill=C_ACCENT + (255,))
+    d.rectangle([u(x1 - 8.0), u(y1 - 1.2), u(x1 + 0.3), u(y1 + 0.3)], fill=C_ACCENT + (255,))
+    d.rectangle([u(x1 - 1.2), u(y1 - 8.0), u(x1 + 0.3), u(y1 + 0.3)], fill=C_ACCENT + (255,))
 
-    f = font(["bahnschrift.ttf", "segoeuib.ttf"], 8.5)
-    spaced(d, 125, 56, "MU ONLINE", f, C_INK + (255,), 2.4)
+    f = font(["bahnschrift.ttf", "segoeuib.ttf"], 7.2)
+    spaced(d, 125, 53.5, "MU ONLINE", f, C_INK + (255,), 2.0)
+
+    # subtle header divider with small cyan center tick
+    d.rectangle([u(60), u(62.2), u(190) - 1, u(62.7)], fill=C_LINE_DIM + (255,))
+    d.rectangle([u(115), u(62.0), u(135) - 1, u(62.9)], fill=C_ACCENT + (210,))
 
     for b in FIELDS:
         rect(d, b, C_FIELD + (255,), C_LINE_DIM + (255,), 0.5, FIELD_PAD)
-    rect(d, CONNECT, (50, 112, 128, 255), C_ACCENT + (255,), 0.5, PAD)
-    rect(d, EXIT, C_PANEL + (255,), C_LINE + (255,), 0.5, PAD)
+    rect(d, CONNECT, (46, 108, 124, 255), C_ACCENT + (255,), 0.5, PAD)
+    rect(d, EXIT, (28, 34, 40, 255), C_LINE + (255,), 0.5, PAD)
     return img
 
 
