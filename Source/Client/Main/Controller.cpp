@@ -1,7 +1,10 @@
 #include "stdafx.h"
 #include "Controller.h"
+#include "AutoHelper.h"
 #include "Camera3D.h"
 #include "CustomComboUI.h"
+#include "ScreenRecorder.h"
+#include "SmartAutoHelperUI.h"
 #include "EventTimer.h"
 #include "ItemManager.h"
 #include "ItemPost.h"
@@ -204,11 +207,35 @@ LRESULT Controller::Keyboard(int nCode, WPARAM wParam, LPARAM lParam)
 
 			if (wParam == 'P' && ((GetKeyState(VK_SHIFT) & 0x8000) != 0))
 			{
-				if (!CheckInputInterfaces())
+				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused())
 				{
 					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
 					{
 						gCustomComboUI.TogglePKMode();
+					}
+					return 1;
+				}
+			}
+
+			if ((wParam == VK_HOME || wParam == 'Z') && SceneFlag == 5 && Hero)
+			{
+				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gAutoHelper.Toggle();
+					}
+					return 1;
+				}
+			}
+
+			if (wParam == VK_END && SceneFlag == 5 && Hero)
+			{
+				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gSmartAutoHelperUI.Toggle();
 					}
 					return 1;
 				}
@@ -219,6 +246,16 @@ LRESULT Controller::Keyboard(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			switch (wParam)
 			{
+				case VK_F8:
+				{
+					if (GetForegroundWindow() == g_hWnd && !CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused())
+					{
+						gScreenRecorder.Toggle();
+					}
+
+					break;
+				}
+
 				case VK_F9:
 				{
 					if (GetForegroundWindow() == g_hWnd)
@@ -284,6 +321,11 @@ LRESULT Controller::Keyboard(int nCode, WPARAM wParam, LPARAM lParam)
 
 void Controller::CheckKeyboardKeys()
 {
+	if (gSmartAutoHelperUI.IsItemInputFocused())
+	{
+		return;
+	}
+
 	if ((GetAsyncKeyStateCall('M') >> 0x0F)) // M Pressed
 	{
 		if (!KeyState['M'])

@@ -348,6 +348,50 @@ struct PMSG_LIVE_CLIENT_SEND
 	WORD MagicSpeed;
 };
 
+struct PMSG_ATTACK_SEND
+{
+	PBMSG_HEAD header; // C1:15
+	BYTE index[2];
+	BYTE action;
+	BYTE dir;
+};
+
+struct PMSG_MULTI_SKILL_ATTACK_SEND
+{
+	PBMSG_HEAD header; // C3:1D
+	BYTE skill;
+	BYTE x;
+	BYTE y;
+	BYTE serial;
+	BYTE count;
+};
+
+struct PMSG_MULTI_SKILL_ATTACK_TARGET
+{
+	BYTE index[2];
+};
+
+struct PMSG_ITEM_GET_SEND
+{
+	PBMSG_HEAD header; // C3:22
+	BYTE index[2];
+};
+
+struct PMSG_ITEM_USE_SEND
+{
+	PBMSG_HEAD header; // C3:26
+	BYTE SourceSlot;
+	BYTE TargetSlot;
+	BYTE type;
+};
+
+struct PMSG_ITEM_REPAIR_SEND
+{
+	PBMSG_HEAD header; // C3:34
+	BYTE slot;
+	BYTE type;
+};
+
 struct PMSG_SKILL_ATTACK_SEND
 {
 	PBMSG_HEAD header; // C3:19

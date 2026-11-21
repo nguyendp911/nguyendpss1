@@ -12,6 +12,8 @@ public:
 
 	void Init();
 
+	static void SetAttackSpeed();
+
 private:
 
 	static void RenderCircleHPMP(int Texture, float x, float y, float Width, float Height, float u, float v, float uWidth, float vHeight, bool Scale, bool StartScale);
@@ -33,8 +35,6 @@ private:
 	static void RenderExperience();
 
 	static void CalculateAttackSpeed(DWORD This);
-
-	static void SetAttackSpeed();
 
 	static void RenderDamageHP(float Position[3], int Value, float Color[3], float scale, bool bMove);
 

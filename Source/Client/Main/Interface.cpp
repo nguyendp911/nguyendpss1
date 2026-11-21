@@ -1,8 +1,11 @@
 #include "stdafx.h"
 #include "Interface.h"
+#include "AutoHelper.h"
 #include "Buff.h"
 #include "Camera3D.h"
 #include "CustomComboUI.h"
+#include "ScreenRecorder.h"
+#include "SmartAutoHelperUI.h"
 #include "LoginScale.h"
 #include "Camera3D.h"
 #include "CustomComboUI.h"
@@ -1275,6 +1278,10 @@ void Interface::LoadImages()
 	Camera3D.LoadImages();
 
 	gCustomComboUI.LoadImages();
+
+	gSmartAutoHelperUI.LoadImages();
+
+	gScreenRecorder.LoadImages();
 }
 
 void Interface::MyUpdateWindowsMouse()
@@ -1302,6 +1309,16 @@ void Interface::MyUpdateWindowsMouse()
 
 	gCustomComboUI.UpdateMouse();
 
+	gSmartAutoHelperUI.UpdateMouse();
+
+	gScreenRecorder.UpdateMouse();
+
+	gSmartAutoHelperUI.UpdateKeyboard();
+
+	gAutoHelper.Work();
+
+	gAutoHelper.ManualSkillChase();
+
 	gMoveList.UpdateMouse();
 
 	gEventTimer.UpdateMouse();
@@ -1326,6 +1343,12 @@ void Interface::MyRenderWindows()
 	gEventTimer.Render();
 
 	gItemPost.Render();
+
+	gSmartAutoHelperUI.Render();
+
+	gScreenRecorder.CaptureFrame();
+
+	gScreenRecorder.Render();
 }
 
 void Interface::RenderLeftDragon(int Texture, float x, float y, float Width, float Height, float u, float v, float uWidth, float vHeight, bool Scale, bool StartScale)

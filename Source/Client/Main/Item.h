@@ -12,6 +12,8 @@ public:
 
 	static void ItemConvert(ITEM* ip, BYTE Attribute1, BYTE Attribute2);
 
+	static WORD myCalcMaxDurability(ITEM* ip, ITEM_ATTRIBUTE* p, int Level);
+
 private:
 
 	static void InsertOptionText();
@@ -27,8 +29,6 @@ private:
 	static int OptionAddHuntHP(char* _Dest, const char* _Format);
 
 	static int OptionAddHuntMP(char* _Dest, const char* _Format);
-
-	static WORD myCalcMaxDurability(ITEM* ip, ITEM_ATTRIBUTE* p, int Level);
 
 	static DWORD ItemValue(ITEM* ip, int goldType);
 

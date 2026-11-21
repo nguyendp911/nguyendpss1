@@ -1,7 +1,10 @@
 #include "stdafx.h"
+#include "AutoHelper.h"
 #include "Buff.h"
 #include "Camera3D.h"
 #include "CustomComboUI.h"
+#include "ScreenRecorder.h"
+#include "SmartAutoHelperUI.h"
 #include "ChaosMix.h"
 #include "Controller.h"
 #include "MapFog.h"
@@ -32,6 +35,7 @@
 #include "RightClickMove.h"
 #include "Sound.h"
 #include "WeaponView.h"
+#include "CustomShadow.h"
 #include "Window.h"
 
 HINSTANCE hins;
@@ -72,6 +76,12 @@ extern "C" _declspec(dllexport) void _cdecl EntryProc()
 
 	gCustomComboUI.Init();
 
+	gAutoHelper.Init();
+
+	gSmartAutoHelperUI.Init();
+
+	gScreenRecorder.Init();
+
 	gHackCheck.Init();
 
 	gPatchs.Init();
@@ -107,6 +117,8 @@ extern "C" _declspec(dllexport) void _cdecl EntryProc()
 	gMiniMap.Init();
 
 	gWeaponView.Init();
+
+	gCustomShadow.Init();
 
 	gGuildLogo.Init();
 
@@ -156,6 +168,8 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 
 		case DLL_PROCESS_DETACH:
 		{
+			gScreenRecorder.Shutdown();
+
 			break;
 		}
 

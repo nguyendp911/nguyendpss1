@@ -10,6 +10,10 @@ public:
 
 	void Init();
 
+	void SendRequestMagicContinue(int skill, int x, int y, int dir, int dis, int angle, int target);
+
+	void SendRequestMagic(int skill, int target);
+
 private:
 
 	static DWORD ReduceCPU();
@@ -81,10 +85,6 @@ private:
 	static void SendContinueFlame();
 
 	static void SendElfBuff();
-
-	void SendRequestMagicContinue(int skill, int x, int y, int dir, int dis, int angle, int target);
-
-	void SendRequestMagic(int skill, int target);
 
 	static bool AttackStage(DWORD c, DWORD o);
 

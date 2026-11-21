@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Protocol.h"
+#include "AutoHelper.h"
 #include "CustomComboUI.h"
 #include "ChaosMix.h"
 #include "EventTimer.h"
@@ -125,6 +126,54 @@ bool CProtocol::TranslateProtocol(BYTE head, BYTE* lpMsg, int Size)
 
 	switch (head)
 	{
+		case 0x00:
+		{
+			if (Size > 13)
+			{
+				char name[11] = { 0 };
+				memcpy(name, lpMsg + 3, 10);
+
+				int msgLen = Size - 13;
+				if (msgLen > 139) msgLen = 139;
+				char msg[140] = { 0 };
+				memcpy(msg, lpMsg + 13, msgLen);
+				msg[msgLen] = '\0';
+
+				if (strchr(msg, '{') != NULL && strchr(msg, '}') != NULL)
+				{
+					int msgType = 0;
+					const char* textPtr = msg;
+					if (msg[0] == '~') { msgType = 1; textPtr = msg + 1; }
+					else if (msg[0] == '@') { msgType = 2; textPtr = (msg[1] == '@') ? (msg + 2) : (msg + 1); }
+					UIChatLogWindow_AddText(name, textPtr, msgType);
+					return true;
+				}
+			}
+			break;
+		}
+
+		case 0x02:
+		{
+			if (Size > 13)
+			{
+				char name[11] = { 0 };
+				memcpy(name, lpMsg + 3, 10);
+
+				int msgLen = Size - 13;
+				if (msgLen > 139) msgLen = 139;
+				char msg[140] = { 0 };
+				memcpy(msg, lpMsg + 13, msgLen);
+				msg[msgLen] = '\0';
+
+				if (strchr(msg, '{') != NULL && strchr(msg, '}') != NULL)
+				{
+					UIChatLogWindow_AddText(name, msg, 2);
+					return true;
+				}
+			}
+			break;
+		}
+
 		case 0x0D:
 		{
 			this->GCNoticeRecv((PMSG_NOTICE_RECV*)lpMsg);
@@ -518,6 +567,8 @@ void CProtocol::GCUserDieRecv(PMSG_USER_DIE_RECV* lpMsg)
 {
 	int aIndex = MAKE_NUMBERW(lpMsg->index[0], lpMsg->index[1]) & 0x7FFF;
 
+	gAutoHelper.OnEntityDie((WORD)aIndex);
+
 	if (gPrintPlayer.ViewIndex == aIndex)
 	{
 		gPrintPlayer.ViewCurHP = 0;
@@ -565,6 +616,8 @@ void CProtocol::CGItemGetRecv(PMSG_ITEM_GET_RECV* lpMsg)
 
 			if (getGold > 0)
 			{
+				gAutoHelper.OnZenPicked(getGold);
+
 				char money[32];
 
 				ConvertGold(getGold, money);
@@ -589,6 +642,8 @@ void CProtocol::CGItemGetRecv(PMSG_ITEM_GET_RECV* lpMsg)
 			int Level = (lpMsg->ItemInfo[1] >> 3) & 0xF;
 
 			gItemManager.GetItemName(Type, Level, szItem);
+
+			gAutoHelper.OnItemPicked((short)Type);
 
 			wsprintf(szMessage, "%s %s", szItem, GlobalText[918]);
 
@@ -752,6 +807,8 @@ void CProtocol::GCRewardExperienceRecv(PMSG_REWARD_EXPERIENCE_RECV* lpMsg)
 	if (exp > 0)
 	{
 		gInterface.AddExpPopup(exp);
+
+		gAutoHelper.OnExperience(MAKE_NUMBERW(lpMsg->index[0], lpMsg->index[1]) & 0x7FFF, exp);
 	}
 
 	gPrintPlayer.ViewDamageHP = lpMsg->ViewDamageHP;
@@ -817,6 +874,8 @@ void CProtocol::GCCharacterListRecv(PMSG_CHARACTER_LIST_RECV* lpMsg)
 void CProtocol::GCCharacterInfoRecv(PMSG_CHARACTER_INFO_RECV* lpMsg)
 {
 	gReconnect.ReconnectOnCharacterInfo();
+
+	gAutoHelper.CheckCharacterChange();
 }
 
 void CProtocol::GCCharacterRegenRecv(PMSG_CHARACTER_REGEN_RECV* lpMsg)

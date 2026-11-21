@@ -159,6 +159,8 @@
 #define Projection ((void(_cdecl*)(float *Position, int *sx, int *sy)) 0x005113F0)
 #define Action ((void(_cdecl*)(DWORD c, DWORD o)) 0x0048D640)
 #define SetAction ((void(_cdecl*)(DWORD c, int action)) 0x0043E820)
+#define SetPlayerStop ((void(_cdecl*)(DWORD c)) 0x004430C0)
+#define SetPlayerAttack ((void(_cdecl*)(DWORD c)) 0x00444410)
 #define SetPlayerShock ((void(_cdecl*)(DWORD c, int Hit)) 0x00444B60)
 #define SetPlayerMagic ((void(_cdecl*)(DWORD c)) 0x00444A80)
 #define SetPlayerColor ((void(_cdecl*)(BYTE PK)) 0x00480D80)
@@ -317,7 +319,9 @@
 #define Bitmaps (&*(BITMAP_t*)0x083A7CA0)
 #define ItemAttribute *(DWORD*)0x07D78068
 #define CreateObject ((DWORD(_cdecl*)(int Type, float Position[3], float Angle[3], float Scale)) 0x004FF5A0)
-#define RenderLinkObject ((void(_cdecl*)(float x, float y, float z, DWORD c, DWORD f, int Type, int Level, int Option1, bool Link, bool Translate, int RenderType)) 0x00455430)
+#include "CustomShadow.h"
+#define OriginalRenderLinkObject ((void(_cdecl*)(float x, float y, float z, DWORD c, DWORD f, int Type, int Level, int Option1, bool Link, bool Translate, int RenderType)) 0x00455430)
+#define RenderLinkObject CCustomShadow::MyRenderLinkObject
 #define RenderPartObject ((void(_cdecl*)(DWORD o, int Type, void *p2, float Light[3], float Alpha, int ItemLevel, int Option1, bool GlobalTransform, bool HideSkin, bool Translate, int Select, int RenderType)) 0x00505A10)
 #define TransformPosition ((void(__thiscall*)(DWORD This, float* Matrix, float Position[3], float WorldPosition[3], bool Translate)) 0x004409A0)
 #define CreateSprite ((int(_cdecl*)(int Type, float Position[3], float Scale, float Light[3], DWORD Owner, float Rotation, int SubType)) 0x004795C0)

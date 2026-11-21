@@ -21,6 +21,8 @@ public:
 
 	void Init();
 
+	bool GetDeleteShadows() { return this->DeleteShadows; }
+
 private:
 
 	static void CheckErrorMessage();

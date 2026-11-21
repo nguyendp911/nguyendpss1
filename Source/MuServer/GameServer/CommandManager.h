@@ -46,7 +46,7 @@ struct SDHP_GLOBAL_POST_RECV
 	PSBMSG_HEAD header; // C1:05:03
 	BYTE type;
 	char name[11];
-	char message[60];
+	char message[140];
 	char serverName[60];
 };
 
@@ -70,7 +70,7 @@ struct SDHP_GLOBAL_POST_SEND
 	PSBMSG_HEAD header; // C1:05:03
 	BYTE type;
 	char name[11];
-	char message[60];
+	char message[140];
 	char serverName[60];
 };
 

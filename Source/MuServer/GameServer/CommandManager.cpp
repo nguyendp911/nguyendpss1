@@ -587,16 +587,20 @@ void CCommandManager::CommandPost(LPOBJ lpObj, char* arg)
 void CCommandManager::GDGlobalPostSend(BYTE type, char* name, char* message)
 {
 	SDHP_GLOBAL_POST_SEND pMsg;
+	memset(&pMsg, 0, sizeof(pMsg));
 
 	pMsg.header.set(0x05, 0x03, sizeof(pMsg));
 
 	pMsg.type = type;
 
 	memcpy(pMsg.name, name, sizeof(pMsg.name));
+	strncpy_s(pMsg.name, sizeof(pMsg.name), name, _TRUNCATE);
 
 	memcpy(pMsg.message, message, sizeof(pMsg.message));
+	strncpy_s(pMsg.message, sizeof(pMsg.message), message, _TRUNCATE);
 
 	memcpy(pMsg.serverName, gServerInfo.m_ServerName, sizeof(pMsg.serverName));
+	strncpy_s(pMsg.serverName, sizeof(pMsg.serverName), gServerInfo.m_ServerName, _TRUNCATE);
 
 	gDataServerConnection.DataSend((BYTE*)&pMsg, sizeof(pMsg));
 }
