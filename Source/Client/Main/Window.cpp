@@ -2,6 +2,7 @@
 #include "Window.h"
 #include "MarketWindow.h"
 #include "PartyMatching.h"
+#include "RegisterUI.h"
 #include "Controller.h"
 #include "Font.h"
 #include "PingSystem.h"
@@ -212,8 +213,22 @@ LRESULT WINAPI CWindow::MyWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 			break;
 		}
 
+		case WM_KEYDOWN:
+		{
+			if (gRegisterUI.IsOpen())
+			{
+				return 0;
+			}
+			break;
+		}
+
 		case WM_CHAR:
 		{
+			if (gRegisterUI.IsOpen())
+			{
+				gRegisterUI.OnChar((wchar_t)wParam);
+				return 0;
+			}
 			if (gMarketWindow.IsEditingPrice())
 			{
 				gMarketWindow.OnChar((wchar_t)wParam);

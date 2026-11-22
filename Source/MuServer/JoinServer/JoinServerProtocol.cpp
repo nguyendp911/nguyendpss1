@@ -65,6 +65,13 @@ void JoinServerProtocolCore(int index, BYTE head, BYTE* lpMsg, int size)
 
 			break;
 		}
+
+		case 0x08:
+		{
+			GJRegisterAccountRecv((SDHP_REGISTER_ACCOUNT_RECV*)lpMsg, index);
+
+			break;
+		}
 	}
 }
 
@@ -446,6 +453,88 @@ void GJAccountCountRecv(SDHP_COUNT_ONLINE_USER_RECV* lpMsg, int index)
 	pMsg.index = lpMsg->index;
 
 	pMsg.count = (int)gAccountManager.GetAccountCount();
+
+	gSocketManager.DataSend(index, (BYTE*)&pMsg, pMsg.header.size);
+}
+
+static bool IsValidAlphaNum(const char* s, int minLen, int maxLen)
+{
+	if (!s) return false;
+	int len = (int)strlen(s);
+	if (len < minLen || len > maxLen) return false;
+	for (int i = 0; i < len; i++)
+	{
+		unsigned char c = (unsigned char)s[i];
+		if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool IsValidDigits(const char* s, int exactLen)
+{
+	if (!s || (int)strlen(s) != exactLen) return false;
+	for (int i = 0; i < exactLen; i++)
+	{
+		if (s[i] < '0' || s[i] > '9') return false;
+	}
+	return true;
+}
+
+void GJRegisterAccountRecv(SDHP_REGISTER_ACCOUNT_RECV* lpMsg, int index)
+{
+	SDHP_REGISTER_ACCOUNT_SEND pMsg;
+	memset(&pMsg, 0, sizeof(pMsg));
+	pMsg.header.set(0x08, sizeof(pMsg));
+	pMsg.index = lpMsg->index;
+
+	char acc[11] = { 0 };
+	char pwd[11] = { 0 };
+	char sno[8] = { 0 };
+	strncpy_s(acc, sizeof(acc), lpMsg->account, _TRUNCATE);
+	strncpy_s(pwd, sizeof(pwd), lpMsg->password, _TRUNCATE);
+	strncpy_s(sno, sizeof(sno), lpMsg->securityCode, _TRUNCATE);
+	strcpy_s(pMsg.account, sizeof(pMsg.account), acc);
+
+	if (!IsValidAlphaNum(acc, 4, 10) || !IsValidAlphaNum(pwd, 4, 10) || !IsValidDigits(sno, 7))
+	{
+		pMsg.result = 3; // Invalid input
+		gSocketManager.DataSend(index, (BYTE*)&pMsg, pMsg.header.size);
+		return;
+	}
+
+#ifndef MYSQL
+	if (gQueryManager.ExecQuery("SELECT memb___id FROM MEMB_INFO WHERE memb___id='%s'", acc) != false && gQueryManager.Fetch() != SQL_NO_DATA)
+#else
+	if (gQueryManager.ExecResultQuery("SELECT memb___id FROM MEMB_INFO WHERE memb___id='%s'", acc) != false && gQueryManager.Fetch() != false)
+#endif
+	{
+		gQueryManager.Close();
+		pMsg.result = 2; // Already exists
+		gSocketManager.DataSend(index, (BYTE*)&pMsg, pMsg.header.size);
+		return;
+	}
+	gQueryManager.Close();
+
+#ifndef MYSQL
+	bool ok = gQueryManager.ExecQuery("INSERT INTO MEMB_INFO (memb___id, memb__pwd, memb_name, sno__numb, bloc_code, AccountLevel, AccountExpireDate, Bloc_Expire, mail_addr, WCoin) VALUES ('%s','%s','%s','%s','0',0,GETDATE(),'1900-01-01 00:00:00',NULL,0)", acc, pwd, acc, sno);
+#else
+	bool ok = gQueryManager.ExecUpdateQuery("INSERT INTO MEMB_INFO (memb___id, memb__pwd, memb_name, sno__numb, bloc_code, AccountLevel, AccountExpireDate, Bloc_Expire, mail_addr, WCoin) VALUES ('%s','%s','%s','%s','0',0,NOW(),'1900-01-01 00:00:00',NULL,0)", acc, pwd, acc, sno);
+#endif
+	gQueryManager.Close();
+
+	if (ok)
+	{
+		pMsg.result = 1; // Success
+		LogAdd(LOG_GREEN, "[Register] Created account [%s] from IP [%s]", acc, lpMsg->IpAddress);
+	}
+	else
+	{
+		pMsg.result = 4; // DB error
+		LogAdd(LOG_RED, "[Register] Failed to create account [%s] from IP [%s]", acc, lpMsg->IpAddress);
+	}
 
 	gSocketManager.DataSend(index, (BYTE*)&pMsg, pMsg.header.size);
 }

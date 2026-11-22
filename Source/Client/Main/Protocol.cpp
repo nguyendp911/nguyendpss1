@@ -19,6 +19,7 @@
 #include "RankingUI.h"
 #include "CashShopUI.h"
 #include "PartyMatching.h"
+#include "RegisterUI.h"
 #include "Language.h"
 #include "MoveList.h"
 #include "PacketManager.h"
@@ -438,6 +439,7 @@ bool CProtocol::TranslateProtocol(BYTE head, BYTE* lpMsg, int Size)
 				case 0x04: gPartyMatchingUI.OnJoinRecv(lpMsg); return true;
 				case 0x05: gPartyMatchingUI.OnNotifyLeaderRecv(lpMsg); return true;
 				case 0x09: gPartyMatchingUI.OnExtInfoRecv(lpMsg); return true;
+				case 0x10: gRegisterUI.OnRegisterAnsRecv(lpMsg); return true;
 			}
 
 			break;

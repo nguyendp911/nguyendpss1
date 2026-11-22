@@ -71,6 +71,16 @@ struct SDHP_COUNT_ONLINE_USER_RECV
 	int index;
 };
 
+struct SDHP_REGISTER_ACCOUNT_RECV
+{
+	PBMSG_HEAD header; // C1:08
+	WORD index;
+	char account[11];
+	char password[11];
+	char securityCode[8];
+	char IpAddress[16];
+};
+
 //**********************************************//
 //********** JoinServer -> GameServer **********//
 //**********************************************//
@@ -118,6 +128,14 @@ struct SDHP_COUNT_ONLINE_USER_SEND
 	int count;
 };
 
+struct SDHP_REGISTER_ACCOUNT_SEND
+{
+	PBMSG_HEAD header; // C1:08
+	WORD index;
+	char account[11];
+	BYTE result; // 1=OK, 2=Exists, 3=Invalid, 4=DB Error
+};
+
 //**********************************************//
 //**********************************************//
 //**********************************************//
@@ -139,5 +157,7 @@ void GJAccountLevelSaveRecv(SDHP_ACCOUNT_LEVEL_SAVE_RECV* lpMsg, int index);
 void JGAccountAlreadyConnectedSend(int GameServerCode, int UserIndex, char* account);
 
 void GJAccountCountRecv(SDHP_COUNT_ONLINE_USER_RECV* lpMsg, int index);
+
+void GJRegisterAccountRecv(SDHP_REGISTER_ACCOUNT_RECV* lpMsg, int index);
 
 void GJServerUserInfoRecv(SDHP_SERVER_USER_INFO_RECV* lpMsg, int index);

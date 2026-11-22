@@ -568,6 +568,11 @@ void ProtocolCore(BYTE head, BYTE* lpMsg, int size, int aIndex, int encrypt, int
 					gPartyMatching.CGSetLeaderRecv((CG_PARTY_MATCHING_SET_LEADER_REQ*)lpMsg, aIndex);
 					break;
 				}
+				case 0x10:
+				{
+					CGRegisterAccountRecv((CG_REGISTER_ACCOUNT_REQ*)lpMsg, aIndex);
+					break;
+				}
 			}
 
 			break;

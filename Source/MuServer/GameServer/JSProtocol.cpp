@@ -48,6 +48,13 @@ void JoinServerProtocolCore(BYTE head, BYTE* lpMsg, int size)
 
 			break;
 		}
+
+		case 0x08:
+		{
+			JGRegisterAccountRecv((SDHP_REGISTER_ACCOUNT_RECV*)lpMsg);
+
+			break;
+		}
 	}
 }
 
@@ -267,4 +274,55 @@ void GJServerUserInfoSend()
 	pMsg.MaxUserCount = (WORD)gServerInfo.m_ServerMaxUserNumber;
 
 	gJoinServerConnection.DataSend((BYTE*)&pMsg, pMsg.header.size);
+}
+
+#include <map>
+#include <string>
+
+static std::map<std::string, DWORD> g_RegisterIpCooldown;
+
+void CGRegisterAccountRecv(CG_REGISTER_ACCOUNT_REQ* lpMsg, int aIndex)
+{
+	if (OBJECT_RANGE(aIndex) == 0 || gObj[aIndex].Connected != OBJECT_CONNECTED)
+	{
+		return;
+	}
+
+	LPOBJ lpObj = &gObj[aIndex];
+	DWORD now = GetTickCount();
+
+	std::map<std::string, DWORD>::iterator it = g_RegisterIpCooldown.find(lpObj->IpAddr);
+	if (it != g_RegisterIpCooldown.end() && (now - it->second) < 5000)
+	{
+		GC_REGISTER_ACCOUNT_ANS ans;
+		ans.header.set(0x99, 0x10, sizeof(ans));
+		ans.result = 5; // Rate limited
+		DataSend(aIndex, (BYTE*)&ans, sizeof(ans));
+		return;
+	}
+	g_RegisterIpCooldown[lpObj->IpAddr] = now;
+
+	SDHP_REGISTER_ACCOUNT_SEND pMsg;
+	memset(&pMsg, 0, sizeof(pMsg));
+	pMsg.header.set(0x08, sizeof(pMsg));
+	pMsg.index = (WORD)aIndex;
+	strncpy_s(pMsg.account, sizeof(pMsg.account), lpMsg->account, _TRUNCATE);
+	strncpy_s(pMsg.password, sizeof(pMsg.password), lpMsg->password, _TRUNCATE);
+	strncpy_s(pMsg.securityCode, sizeof(pMsg.securityCode), lpMsg->securityCode, _TRUNCATE);
+	strncpy_s(pMsg.IpAddress, sizeof(pMsg.IpAddress), lpObj->IpAddr, _TRUNCATE);
+
+	gJoinServerConnection.DataSend((BYTE*)&pMsg, pMsg.header.size);
+}
+
+void JGRegisterAccountRecv(SDHP_REGISTER_ACCOUNT_RECV* lpMsg)
+{
+	if (OBJECT_RANGE(lpMsg->index) == 0 || gObj[lpMsg->index].Connected != OBJECT_CONNECTED)
+	{
+		return;
+	}
+
+	GC_REGISTER_ACCOUNT_ANS ans;
+	ans.header.set(0x99, 0x10, sizeof(ans));
+	ans.result = lpMsg->result;
+	DataSend(lpMsg->index, (BYTE*)&ans, sizeof(ans));
 }

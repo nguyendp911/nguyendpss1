@@ -48,6 +48,7 @@
 "PacketManager.cpp"
 "PartyMatching.cpp"
 "DuelManager.cpp"
+"RegisterUI.cpp"
 "Patchs.cpp"
 "PingSystem.cpp"
 "PrintPlayer.cpp"

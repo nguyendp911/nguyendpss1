@@ -95,6 +95,38 @@ struct SDHP_SERVER_USER_INFO_SEND
 	WORD MaxUserCount;
 };
 
+struct SDHP_REGISTER_ACCOUNT_SEND
+{
+	PBMSG_HEAD header; // C1:08
+	WORD index;
+	char account[11];
+	char password[11];
+	char securityCode[8];
+	char IpAddress[16];
+};
+
+struct SDHP_REGISTER_ACCOUNT_RECV
+{
+	PBMSG_HEAD header; // C1:08
+	WORD index;
+	char account[11];
+	BYTE result;
+};
+
+struct CG_REGISTER_ACCOUNT_REQ
+{
+	PSBMSG_HEAD header; // C1:99:10
+	char account[11];
+	char password[11];
+	char securityCode[8];
+};
+
+struct GC_REGISTER_ACCOUNT_ANS
+{
+	PSBMSG_HEAD header; // C1:99:10
+	BYTE result;
+};
+
 //**********************************************//
 //**********************************************//
 //**********************************************//
@@ -118,5 +150,9 @@ void JGAccountLevelRecv(SDHP_ACCOUNT_LEVEL_RECV* lpMsg);
 void GJAccountLevelSaveSend(int aIndex, int AccountLevel, int AccountExpireTime);
 
 void JGAccountAlreadyConnectedRecv(SDHP_ACCOUNT_ALREADY_CONNECTED_RECV* lpMsg);
+
+void CGRegisterAccountRecv(CG_REGISTER_ACCOUNT_REQ* lpMsg, int aIndex);
+
+void JGRegisterAccountRecv(SDHP_REGISTER_ACCOUNT_RECV* lpMsg);
 
 void GJServerUserInfoSend();

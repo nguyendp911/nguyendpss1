@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "LoginScale.h"
 #include "LoginRemember.h"
+#include "RegisterUI.h"
 #include "Interface.h"
 #include <intrin.h>
 
@@ -482,6 +483,15 @@ static void _cdecl DrawLoginExtras()
 	}
 }
 
+static void _cdecl DrawRegisterOverlay()
+{
+	int state = LOGIN_STATE;
+	if (state == 2 || state == 3)
+	{
+		gRegisterUI.Render(state);
+	}
+}
+
 static void _cdecl EndMouseMap()
 {
 	if (g_MouseSaved)
@@ -533,6 +543,11 @@ __declspec(naked) static void EndLoginWindow()
 		popad
 		popfd
 		mov byte ptr[g_LoginActive], 0
+		pushfd
+		pushad
+		call DrawRegisterOverlay
+		popad
+		popfd
 		push 0x3F19999A
 		jmp back
 	}
@@ -603,6 +618,11 @@ void _cdecl CLoginScale::UpdateLoginScene()
 		bool click = (down && !g_PrevDown);
 
 		g_PrevDown = down;
+
+		if (gRegisterUI.UpdateMouse(state, click))
+		{
+			return;
+		}
 
 		bool hide = gLoginRemember.Update(rx, ry, click, state);
 
