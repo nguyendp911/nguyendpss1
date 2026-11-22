@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "DSProtocol.h"
+#include "Duel.h"
 #include "PartyMatching.h"
 #include "BloodCastle.h"
 #include "ChaosBox.h"
@@ -784,6 +785,8 @@ void DGCharacterInfoRecv(SDHP_CHARACTER_INFO_RECV* lpMsg)
 	gQuest.GCQuestInfoSend(lpObj->Index);
 
 	gReconnect.GetReconnectInfo(lpObj);
+
+	gDuel.ResetDuel(lpObj);
 
 	gPartyMatching.OnUserEnterGame(lpObj);
 

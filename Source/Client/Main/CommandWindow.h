@@ -26,6 +26,7 @@ enum eCommandMode
 	CMD_MODE_PARTY = 1,
 	CMD_MODE_TRADE = 2,
 	CMD_MODE_GUILD = 3,
+	CMD_MODE_DUEL = 4,
 };
 
 class CCommandWindow

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "GameMain.h"
+#include "Duel.h"
 #include "BattleSoccerManager.h"
 #include "DSProtocol.h"
 #include "HackCheck.h"
@@ -144,6 +145,8 @@ void CALLBACK QueueTimerCallback(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
 		case QUEUE_TIMER_EVENT:
 		{
 			gObjEventRunProc();
+
+			gDuel.MainProc();
 
 			break;
 		}

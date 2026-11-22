@@ -328,6 +328,14 @@ struct INTERFACE_STATE
 	DWORD type : 10;
 };
 
+struct DUEL_BET_SLOT
+{
+	BYTE slot;
+	WORD index;
+	BYTE level;
+	DWORD serial;
+};
+
 struct OBJECTSTRUCT
 {
 	int Index;
@@ -607,6 +615,19 @@ struct OBJECTSTRUCT
 	int LastAutomataRuntime;
 	int LastAutomataDelay;
 	DWORD LastCheckTick;
+	// Duel PvP state
+	int DuelUser;
+	int DuelScore;
+	int DuelRequestedBy;
+	DWORD DuelRequestTick;
+	DWORD DuelTick;
+	BYTE DuelRules;
+	BYTE DuelBetCount;
+	DUEL_BET_SLOT DuelBetItems[4];
+	bool DuelIsChallenger;
+	BYTE DuelPendingRules;
+	BYTE DuelPendingBetCount;
+	DUEL_BET_SLOT DuelPendingBetItems[4];
 };
 
 struct OBJECTSTRUCT_HEADER

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Protocol.h"
+#include "Duel.h"
 #include "CustomCombo.h"
 #include "Attack.h"
 #include "Blacklist.h"
@@ -565,6 +566,25 @@ void ProtocolCore(BYTE head, BYTE* lpMsg, int size, int aIndex, int encrypt, int
 				case 0x08:
 				{
 					gPartyMatching.CGSetLeaderRecv((CG_PARTY_MATCHING_SET_LEADER_REQ*)lpMsg, aIndex);
+					break;
+				}
+			}
+
+			break;
+		}
+
+		case 0xAA:
+		{
+			switch (((lpMsg[0] == 0xC1 || lpMsg[0] == 0xC3) ? lpMsg[3] : lpMsg[4]))
+			{
+				case 0x01:
+				{
+					gDuel.CGDuelRequestRecv((PMSG_DUEL_REQUEST_SEND*)lpMsg, aIndex);
+					break;
+				}
+				case 0x02:
+				{
+					gDuel.CGDuelAnswerRecv((PMSG_DUEL_ANSWER_RECV*)lpMsg, aIndex);
 					break;
 				}
 			}

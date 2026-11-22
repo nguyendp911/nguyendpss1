@@ -10,6 +10,7 @@
 #include "RankingUI.h"
 #include "CashShopUI.h"
 #include "PartyMatching.h"
+#include "DuelManager.h"
 #include "SmartAutoHelperUI.h"
 #include "EventTimer.h"
 #include "ItemManager.h"
@@ -321,6 +322,14 @@ LRESULT Controller::Keyboard(int nCode, WPARAM wParam, LPARAM lParam)
 
 			if (wParam == VK_ESCAPE && SceneFlag == 5 && Hero)
 			{
+				if (gDuelManager.IsOpen())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gDuelManager.CloseSetupWindow();
+					}
+					return 1;
+				}
 				if (gPartyMatchingUI.IsOpen())
 				{
 					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)

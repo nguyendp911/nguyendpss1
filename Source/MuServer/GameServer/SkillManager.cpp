@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "SkillManager.h"
+#include "Duel.h"
 #include "CustomCombo.h"
 #include "Math.h"
 #include "Attack.h"
@@ -776,6 +777,17 @@ bool CSkillManager::RunningSkill(int aIndex, int bIndex, CSkill* lpSkill, BYTE x
 
 	lpObj->ShieldDamageReductionTime = 0;
 
+	if (lpObj->Type == OBJECT_USER && lpObj->DuelUser != -1 && (lpObj->DuelRules & DUEL_RULE_NO_BUFF))
+	{
+		if (lpSkill->m_skill == SKILL_MANA_SHIELD || lpSkill->m_skill == SKILL_HEAL ||
+			lpSkill->m_skill == SKILL_GREATER_DEFENSE || lpSkill->m_skill == SKILL_GREATER_DAMAGE ||
+			lpSkill->m_skill == SKILL_GREATER_LIFE)
+		{
+			gNotice.GCNoticeSend(aIndex, 1, "[DUEL] Buff skills are disabled by duel rules!");
+			return false;
+		}
+	}
+
 	switch (lpSkill->m_skill)
 	{
 		case SKILL_FLAME:
@@ -990,6 +1002,19 @@ bool CSkillManager::MultiSkillAttack(int aIndex, int bIndex, CSkill* lpSkill)
 				this->BasicSkillAttack(aIndex, bIndex, lpSkill);
 
 				break;
+			}
+		}
+
+		// In active Duel PvP: automatically apply AoE/duration skill damage to the Duel opponent if within range
+		if (lpObj->DuelUser != -1 && OBJECT_USER_RANGE(lpObj->DuelUser) != 0 && gObjIsConnectedGP(lpObj->DuelUser) != 0)
+		{
+			LPOBJ lpDuelTarget = &gObj[lpObj->DuelUser];
+			if (lpDuelTarget->Live != 0 && lpDuelTarget->Map == lpObj->Map && lpDuelTarget->Index != bIndex)
+			{
+				if (gObjCalcDistance(lpObj, lpDuelTarget) <= 7)
+				{
+					gAttack.Attack(lpObj, lpDuelTarget, lpSkill, false, 0, 0);
+				}
 			}
 		}
 	}
@@ -1813,7 +1838,7 @@ void CSkillManager::CGMultiSkillAttackRecv(PMSG_MULTI_SKILL_ATTACK_RECV* lpMsg, 
 		return;
 	}
 
-	if (gMap[lpObj->Map].CheckAttr(lpObj->X, lpObj->Y, 1) != 0)
+	if (lpObj->DuelUser == -1 && gMap[lpObj->Map].CheckAttr(lpObj->X, lpObj->Y, 1) != 0)
 	{
 		return;
 	}
@@ -2006,7 +2031,7 @@ void CSkillManager::CGDurationSkillAttackRecv(PMSG_DURATION_SKILL_ATTACK_RECV* l
 		return;
 	}
 
-	if (gMap[lpObj->Map].CheckAttr(lpObj->X, lpObj->Y, 1) != 0)
+	if (lpObj->DuelUser == -1 && gMap[lpObj->Map].CheckAttr(lpObj->X, lpObj->Y, 1) != 0)
 	{
 		return;
 	}

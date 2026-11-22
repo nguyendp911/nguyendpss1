@@ -11,6 +11,7 @@
 #include "RankingUI.h"
 #include "CashShopUI.h"
 #include "PartyMatching.h"
+#include "DuelManager.h"
 #include "SmartAutoHelperUI.h"
 #include "LoginScale.h"
 #include "Camera3D.h"
@@ -1346,6 +1347,8 @@ void Interface::MyUpdateWindowsMouse()
 
 	gPartyMatchingUI.UpdateMouse();
 
+	gDuelManager.UpdateMouse();
+
 	gSmartAutoHelperUI.UpdateKeyboard();
 
 	gAutoHelper.Work();
@@ -1390,6 +1393,8 @@ void Interface::MyRenderWindows()
 	gCashShopUI.Render();
 
 	gPartyMatchingUI.Render();
+
+	gDuelManager.Render();
 
 	gScreenRecorder.CaptureFrame();
 

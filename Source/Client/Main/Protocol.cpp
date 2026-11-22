@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Protocol.h"
+#include "DuelManager.h"
 #include "AutoHelper.h"
 #include "CustomComboUI.h"
 #include "ChaosMix.h"
@@ -437,6 +438,20 @@ bool CProtocol::TranslateProtocol(BYTE head, BYTE* lpMsg, int Size)
 				case 0x04: gPartyMatchingUI.OnJoinRecv(lpMsg); return true;
 				case 0x05: gPartyMatchingUI.OnNotifyLeaderRecv(lpMsg); return true;
 				case 0x09: gPartyMatchingUI.OnExtInfoRecv(lpMsg); return true;
+			}
+
+			break;
+		}
+
+		case 0xAA:
+		{
+			switch (((lpMsg[0] == 0xC1) ? lpMsg[3] : lpMsg[4]))
+			{
+				case 0x01: gDuelManager.OnDuelRequestRecv(lpMsg); return true;
+				case 0x03: gDuelManager.OnDuelStartRecv(lpMsg); return true;
+				case 0x04: gDuelManager.OnDuelEndRecv(lpMsg); return true;
+				case 0x05: gDuelManager.OnDuelScoreRecv(lpMsg); return true;
+				case 0x06: gDuelManager.OnDuelOpenSetupRecv(lpMsg); return true;
 			}
 
 			break;

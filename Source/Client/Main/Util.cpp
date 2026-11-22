@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Util.h"
+#include "DuelManager.h"
 
 void SetByte(DWORD offset, BYTE value)
 {
@@ -171,6 +172,11 @@ SHORT WINAPI GetAsyncKeyStateCall(int key)
 	if (GetForegroundWindow() != g_hWnd)
 	{
 		return 0;
+	}
+
+	if (key == VK_CONTROL && gDuelManager.IsInDuel() && !CheckInputInterfaces())
+	{
+		return (SHORT)0x8000;
 	}
 
 	return GetAsyncKeyState(key);

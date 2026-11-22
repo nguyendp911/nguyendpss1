@@ -319,11 +319,12 @@ bool CCustomCombo::CheckCombo(LPOBJ lpObj, LPOBJ lpTarget, CSkill* lpSkill, int 
 	// 2. Both players are in an active Duel with each other
 	// 3. Attacker has toggled PK Mode ON on client (lpData->pkMode != 0)
 	bool isTargetPlayer = (lpTarget->Type == OBJECT_USER);
+	bool isDuel = (lpObj->DuelUser != -1 && lpObj->DuelUser == lpTarget->Index && lpTarget->DuelUser == lpObj->Index);
 	bool isPKModeOn = (lpData->pkMode != 0);
 
-	bool isPvP = isTargetPlayer || isPKModeOn;
+	bool isPvP = isTargetPlayer || isDuel || isPKModeOn;
 
-	if (isPvP && this->m_PvPRequire3Skills)
+	if (isDuel || (isPvP && this->m_PvPRequire3Skills))
 	{
 		// In PvP / Duel / PK Mode: MUST execute configured 3 skills in exact sequence!
 		if (lpSkill == NULL)

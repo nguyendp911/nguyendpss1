@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CommandWindow.h"
+#include "DuelManager.h"
 #include "Font.h"
 #include "JewelBankUI.h"
 #include "MarketWindow.h"
@@ -173,14 +174,14 @@ void CCommandWindow::Render()
 		DrawCommandCard(col1, row1, bw, bh, "PT", "Party Invite", "Right-Click player", CMColor(125, 240, 155, 255), 0.30f, 0.85f, 0.45f, this->m_ActiveMode == CMD_MODE_PARTY);
 		DrawCommandCard(col2, row1, bw, bh, "TR", "Trade Request", "Right-Click player", CMColor(120, 232, 255, 255), 0.30f, 0.78f, 0.95f, this->m_ActiveMode == CMD_MODE_TRADE);
 		DrawCommandCard(col1, row2, bw, bh, "GD", "Join Guild", "Right-Click GM", CMColor(255, 218, 105, 255), 0.92f, 0.72f, 0.25f, this->m_ActiveMode == CMD_MODE_GUILD);
-		DrawCommandCard(col2, row2, bw, bh, "AU", "Auto Helper", "Open Auto (Z)", CMColor(165, 225, 255, 255), 0.42f, 0.75f, 0.90f, false);
+		DrawCommandCard(col2, row2, bw, bh, "DL", "Duel PvP", "Right-Click player", CMColor(255, 130, 120, 255), 0.92f, 0.34f, 0.30f, this->m_ActiveMode == CMD_MODE_DUEL);
 		DrawCommandCard(col1, row3, bw, bh, "JB", "Jewel Bank", "Open Bank (J)", CMColor(145, 235, 245, 255), 0.35f, 0.82f, 0.88f, false);
 		DrawCommandCard(col2, row3, bw, bh, "MK", "Marketplace", "Open Market (F5)", CMColor(255, 205, 115, 255), 0.90f, 0.65f, 0.28f, false);
 
 		// Footer hint bar
 		CMRect(px + 14.0f, py + 184.0f, pw - 28.0f, 38.0f, 0.18f, 0.23f, 0.28f, 0.90f);
 		CMRect(px + 15.0f, py + 185.0f, pw - 30.0f, 36.0f, 0.055f, 0.075f, 0.100f, 0.94f);
-		CMTextCentered(px + pw * 0.5f, py + 191.0f, "Select Party / Trade / Guild -> Right-Click target player", CMColor(245, 224, 155, 255), false);
+		CMTextCentered(px + pw * 0.5f, py + 191.0f, "Select Party / Trade / Guild / Duel -> Right-Click player", CMColor(245, 224, 155, 255), false);
 		CMTextCentered(px + pw * 0.5f, py + 205.0f, "Press [D] or [ESC] to close or cancel target mode", CMColor(150, 175, 195, 255), false);
 	}
 
@@ -204,6 +205,7 @@ void CCommandWindow::RenderTargetCursor()
 	// Small active-mode banner at top-center so player knows target mode is active
 	const char* modeText = (this->m_ActiveMode == CMD_MODE_PARTY) ? "PARTY MODE: Right-Click a player (ESC to cancel)"
 		: (this->m_ActiveMode == CMD_MODE_TRADE) ? "TRADE MODE: Right-Click a player (ESC to cancel)"
+		: (this->m_ActiveMode == CMD_MODE_DUEL) ? "DUEL PVP MODE: Right-Click a player (ESC to cancel)"
 		: "GUILD MODE: Right-Click a Guild Master (ESC to cancel)";
 	CMSetFont(g_hFontBold);
 	float mw = CMMeasureW(modeText) + 20.0f;
@@ -224,9 +226,11 @@ void CCommandWindow::RenderTargetCursor()
 
 	const char* hint = (this->m_ActiveMode == CMD_MODE_PARTY) ? "Right-Click: Invite to Party"
 		: (this->m_ActiveMode == CMD_MODE_TRADE) ? "Right-Click: Request Trade"
+		: (this->m_ActiveMode == CMD_MODE_DUEL) ? "Right-Click: Challenge to Duel"
 		: "Right-Click: Join Guild";
 	DWORD hintCol = (this->m_ActiveMode == CMD_MODE_PARTY) ? CMColor(130, 250, 155, 255)
 		: (this->m_ActiveMode == CMD_MODE_TRADE) ? CMColor(120, 238, 255, 255)
+		: (this->m_ActiveMode == CMD_MODE_DUEL) ? CMColor(255, 130, 120, 255)
 		: CMColor(255, 220, 115, 255);
 
 	float boxW = 165.0f;
@@ -308,9 +312,9 @@ void CCommandWindow::UpdateMouse()
 				}
 				if (CMHit(col2, row2, bw, bh))
 				{
+					this->m_IsOpen = false;
+					this->m_ActiveMode = CMD_MODE_DUEL;
 					PlayBuffer(25, 0, 0);
-					this->Show(false);
-					gSmartAutoHelperUI.Toggle();
 					return;
 				}
 				if (CMHit(col1, row3, bw, bh))
@@ -366,6 +370,7 @@ void CCommandWindow::UpdateMouse()
 				if (this->m_ActiveMode == CMD_MODE_PARTY) this->ExecuteParty(targetKey, targetName);
 				else if (this->m_ActiveMode == CMD_MODE_TRADE) this->ExecuteTrade(targetKey, targetName);
 				else if (this->m_ActiveMode == CMD_MODE_GUILD) this->ExecuteGuild(targetKey, targetName);
+				else if (this->m_ActiveMode == CMD_MODE_DUEL) gDuelManager.OpenSetupWindow(targetKey, targetName);
 			}
 		}
 

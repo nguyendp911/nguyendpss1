@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ObjectManager.h"
+#include "Duel.h"
 #include "PartyMatching.h"
 #include "Attack.h"
 #include "BattleSoccerManager.h"
@@ -321,6 +322,13 @@ void CObjectManager::ObjectSetStateProc()
 
 					break;
 				}
+
+				case 3:
+				{
+					gDuel.RespawnDuelUser(lpObj);
+
+					break;
+				}
 			}
 
 			lpObj->TX = lpObj->X;
@@ -627,6 +635,8 @@ bool CObjectManager::CharacterGameClose(int aIndex)
 	}
 
 	gReconnect.SetReconnectInfo(lpObj);
+
+	gDuel.ResetDuel(lpObj);
 
 	if (OBJECT_RANGE(lpObj->PartyNumber) != 0)
 	{
@@ -2860,22 +2870,29 @@ void CObjectManager::CharacterLifeCheck(LPOBJ lpObj, LPOBJ lpTarget, int damage,
 
 		if (lpTarget->Type == OBJECT_USER)
 		{
-			gObjUserDie(lpTarget, &gObj[SummonIndex]);
-
-			if (lpTarget->AttackerKilled == 0)
+			if (gDuel.CheckDuel(&gObj[SummonIndex], lpTarget))
 			{
-				gObjPlayerKiller(&gObj[SummonIndex], lpTarget);
-			}
-
-			lpTarget->AttackerKilled = 0;
-
-			if (gGuild.GuildWarStateCheck(&gObj[SummonIndex], lpTarget) == false)
-			{
-				lpTarget->KillerType = 0;
+				gDuel.CheckDuelScore(&gObj[SummonIndex], lpTarget);
 			}
 			else
 			{
-				lpTarget->KillerType = 2;
+				gObjUserDie(lpTarget, &gObj[SummonIndex]);
+
+				if (lpTarget->AttackerKilled == 0)
+				{
+					gObjPlayerKiller(&gObj[SummonIndex], lpTarget);
+				}
+
+				lpTarget->AttackerKilled = 0;
+
+				if (gGuild.GuildWarStateCheck(&gObj[SummonIndex], lpTarget) == false)
+				{
+					lpTarget->KillerType = 0;
+				}
+				else
+				{
+					lpTarget->KillerType = 2;
+				}
 			}
 
 			if (OBJECT_RANGE(lpTarget->SummonIndex) != 0)

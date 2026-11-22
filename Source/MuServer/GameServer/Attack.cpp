@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Attack.h"
+#include "Duel.h"
 #include "CustomCombo.h"
 #include "BattleSoccerManager.h"
 #include "CustomSafeZone.h"
@@ -50,9 +51,12 @@ bool CAttack::Attack(LPOBJ lpObj, LPOBJ lpTarget, CSkill* lpSkill, bool send, in
 		return false;
 	}
 
-	if (gMap[lpObj->Map].CheckAttr(lpObj->X, lpObj->Y, 1) != 0 || gMap[lpTarget->Map].CheckAttr(lpTarget->X, lpTarget->Y, 1) != 0)
+	if (gDuel.CheckDuel(lpObj, lpTarget) == false)
 	{
-		return false;
+		if (gMap[lpObj->Map].CheckAttr(lpObj->X, lpObj->Y, 1) != 0 || gMap[lpTarget->Map].CheckAttr(lpTarget->X, lpTarget->Y, 1) != 0)
+		{
+			return false;
+		}
 	}
 
 	if (lpObj->GuildNumber > 0 && lpObj->Guild != 0 && lpObj->Guild->WarState != GUILD_WAR_STATE_NONE)
@@ -76,7 +80,7 @@ bool CAttack::Attack(LPOBJ lpObj, LPOBJ lpTarget, CSkill* lpSkill, bool send, in
 		}
 	}
 
-	if (lpObj->Type == OBJECT_USER && lpTarget->Type == OBJECT_USER)
+	if (lpObj->Type == OBJECT_USER && lpTarget->Type == OBJECT_USER && gDuel.CheckDuel(lpObj, lpTarget) == false)
 	{
 		if (gSafeZone.CheckSafeZone(lpTarget->Map, lpTarget->X, lpTarget->Y))
 		{
@@ -780,6 +784,11 @@ bool CAttack::CheckPlayerTarget(LPOBJ lpObj, LPOBJ lpTarget)
 	if (lpTarget->Authority == 32)
 	{
 		return false;
+	}
+
+	if (gDuel.CheckDuel(lpObj, lpTarget) != false)
+	{
+		return true;
 	}
 
 	if (gParty.IsMember(lpObj->PartyNumber, lpTarget->Index) != false)

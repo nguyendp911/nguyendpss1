@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CommandManager.h"
+#include "Duel.h"
 #include "CustomCombo.h"
 #include "Market.h"
 #include "BonusManager.h"
@@ -240,6 +241,26 @@ bool CCommandManager::ManagementCore(LPOBJ lpObj, char* message)
 	if (_stricmp(command, "/combo") == 0)
 	{
 		gCustomCombo.CommandCombo(lpObj);
+		return true;
+	}
+
+	if (_stricmp(command, "/duel") == 0 || _stricmp(command, "/thachdau") == 0)
+	{
+		char* arg = &message[strlen(command)];
+		while (*arg == ' ') arg++;
+		gDuel.CommandDuel(lpObj, arg);
+		return true;
+	}
+
+	if (_stricmp(command, "/okduel") == 0 || _stricmp(command, "/acceptduel") == 0)
+	{
+		gDuel.CommandDuelAccept(lpObj);
+		return true;
+	}
+
+	if (_stricmp(command, "/cancelduel") == 0 || _stricmp(command, "/refuseduel") == 0)
+	{
+		gDuel.CommandDuelRefuse(lpObj);
 		return true;
 	}
 

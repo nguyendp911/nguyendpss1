@@ -47,6 +47,7 @@
 "OptionsMenu.cpp"
 "PacketManager.cpp"
 "PartyMatching.cpp"
+"DuelManager.cpp"
 "Patchs.cpp"
 "PingSystem.cpp"
 "PrintPlayer.cpp"

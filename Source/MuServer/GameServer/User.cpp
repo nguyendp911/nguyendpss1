@@ -2305,7 +2305,7 @@ void gObjSecondProc()
 
 				//int m_BattleTimer = gBattleSoccer.CheckBattleGroundTimer();
 
-				if (gGameMaster.CheckGameMasterLevel(lpObj, 1) != 0)
+				if (gGameMaster.CheckGameMasterLevel(lpObj, 1) != 0 || lpObj->DuelUser != -1)
 				{
 					BattleGround = 0;
 				}

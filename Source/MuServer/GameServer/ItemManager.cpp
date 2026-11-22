@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ItemManager.h"
+#include "Duel.h"
 #include "BloodCastle.h"
 #include "ChaosBox.h"
 #include "DSProtocol.h"
@@ -2720,6 +2721,20 @@ void CItemManager::CGItemUseRecv(PMSG_ITEM_USE_RECV* lpMsg, int aIndex)
 	}
 	else if ((lpItem->m_Index >= GET_ITEM(14, 0) && lpItem->m_Index <= GET_ITEM(14, 6)))
 	{
+		if (lpObj->DuelUser != -1)
+		{
+			if ((lpItem->m_Index <= GET_ITEM(14, 3)) && (lpObj->DuelRules & DUEL_RULE_NO_HP))
+			{
+				gNotice.GCNoticeSend(aIndex, 1, "[DUEL] HP Potions are disabled by duel rules!");
+				return;
+			}
+			if ((lpItem->m_Index >= GET_ITEM(14, 4)) && (lpObj->DuelRules & DUEL_RULE_NO_MANA))
+			{
+				gNotice.GCNoticeSend(aIndex, 1, "[DUEL] Mana Potions are disabled by duel rules!");
+				return;
+			}
+		}
+
 		if (gObjectManager.CharacterUsePotion(lpObj, lpItem) != 0)
 		{
 			this->DecreaseItemDur(lpObj, lpMsg->SourceSlot, 1);
