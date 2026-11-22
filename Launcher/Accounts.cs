@@ -12,7 +12,9 @@ class AccountPanel : Panel, IShown
     readonly DataGridView grid = new DataGridView();
     readonly TextBox tbSearch = K.Tb(160), tbId = K.Tb(110), tbPw = K.Tb(110);
     readonly CheckBox ckOnline = K.Ck("Chỉ online", false);
-    readonly NumericUpDown numLevel = K.Num(0, 255, 0, 60);
+    readonly NumericUpDown numLevel = K.Num(0, 255, 0, 56);
+    readonly NumericUpDown numWCoin = K.Num(0, 2000000000, 10000, 92);
+    readonly NumericUpDown numVipDays = K.Num(1, 365, 30, 56);
     readonly Label lblInfo = K.Lbl("", true);
     List<string[]> rows = new List<string[]>();
 
@@ -35,29 +37,37 @@ class AccountPanel : Panel, IShown
         K.StyleGrid(grid);
         grid.Dock = DockStyle.Fill;
         grid.Columns.Add("id", "Tài khoản");
-        grid.Columns.Add("lv", "Level");
-        grid.Columns.Add("exp", "Hết hạn");
+        grid.Columns.Add("lv", "VIP Lv");
+        grid.Columns.Add("exp", "Hết hạn VIP");
+        grid.Columns.Add("wc", "WCoin");
         grid.Columns.Add("blk", "Trạng thái");
         grid.Columns.Add("on", "Online");
         grid.Columns.Add("ip", "IP");
         grid.Columns.Add("hrs", "Giờ online");
         grid.Columns["lv"].FillWeight = 40;
+        grid.Columns["wc"].FillWeight = 65;
         grid.Columns["hrs"].FillWeight = 50;
         grid.SelectionChanged += delegate { OnSelect(); };
 
         var gridHost = new Panel { Dock = DockStyle.Fill, Padding = new Padding(14, 0, 14, 0), BackColor = Theme.Panel };
         gridHost.Controls.Add(grid);
 
-        var bottom = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 96, BackColor = Theme.Panel, Padding = new Padding(14, 10, 14, 0), WrapContents = true };
+        var bottom = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 128, BackColor = Theme.Panel, Padding = new Padding(14, 8, 14, 0), WrapContents = true };
         var l1 = K.Lbl("Tài khoản", true); l1.Margin = new Padding(0, 8, 6, 0);
-        var l2 = K.Lbl("Mật khẩu", true); l2.Margin = new Padding(10, 8, 6, 0);
-        var l3 = K.Lbl("Level", true); l3.Margin = new Padding(10, 8, 6, 0);
-        tbId.Margin = new Padding(0, 5, 0, 0); tbPw.Margin = new Padding(0, 5, 0, 0); numLevel.Margin = new Padding(0, 5, 14, 0);
+        var l2 = K.Lbl("Mật khẩu", true); l2.Margin = new Padding(8, 8, 6, 0);
+        var l3 = K.Lbl("VIP Lv", true); l3.Margin = new Padding(8, 8, 6, 0);
+        var l4 = K.Lbl("WCoin", true); l4.Margin = new Padding(8, 8, 6, 0);
+        var l5 = K.Lbl("Ngày VIP", true); l5.Margin = new Padding(8, 8, 6, 0);
+        tbId.Margin = new Padding(0, 5, 0, 0); tbPw.Margin = new Padding(0, 5, 0, 0); numLevel.Margin = new Padding(0, 5, 0, 0);
+        numWCoin.Margin = new Padding(0, 5, 0, 0); numVipDays.Margin = new Padding(0, 5, 10, 0);
         tbId.MaxLength = 10; tbPw.MaxLength = 10;
-        bottom.Controls.AddRange(new Control[] { l1, tbId, l2, tbPw, l3, numLevel });
+        bottom.Controls.AddRange(new Control[] { l1, tbId, l2, tbPw, l3, numLevel, l4, numWCoin, l5, numVipDays });
         bottom.Controls.Add(Btn("＋  Tạo tài khoản", Theme.Green, false, delegate { Create(); }));
         bottom.Controls.Add(Btn("Đổi mật khẩu", Theme.Muted, true, delegate { SetPassword(); }));
-        bottom.Controls.Add(Btn("Đặt level", Theme.Muted, true, delegate { SetLevel(); }));
+        bottom.Controls.Add(Btn("＋ Cộng WCoin", Theme.Blue, false, delegate { AddWCoin(); }));
+        bottom.Controls.Add(Btn("Đặt WCoin", Theme.Muted, true, delegate { SetWCoin(); }));
+        bottom.Controls.Add(Btn("Cấp VIP (ngày)", Theme.Amber, false, delegate { GrantVipDays(); }));
+        bottom.Controls.Add(Btn("Hủy VIP", Theme.Muted, true, delegate { RemoveVip(); }));
         bottom.Controls.Add(Btn("Khóa / Mở khóa", Theme.Red, true, delegate { ToggleBlock(); }));
 
         Controls.Add(gridHost);
@@ -82,7 +92,7 @@ class AccountPanel : Panel, IShown
     {
         if (!Db.Available) { lblInfo.Text = "Chưa có mariadb\\mu.cnf"; return; }
         string err;
-        var r = Db.Query("SELECT i.memb___id, i.AccountLevel, DATE_FORMAT(i.AccountExpireDate,'%Y-%m-%d'), i.bloc_code, IFNULL(s.ConnectStat,0), IFNULL(s.IP,''), IFNULL(s.OnlineHours,0) FROM MEMB_INFO i LEFT JOIN MEMB_STAT s ON s.memb___id=i.memb___id ORDER BY i.memb___id LIMIT 1000", out err);
+        var r = Db.Query("SELECT i.memb___id, i.AccountLevel, DATE_FORMAT(i.AccountExpireDate,'%Y-%m-%d %H:%i'), COALESCE(i.WCoin,0), i.bloc_code, IFNULL(s.ConnectStat,0), IFNULL(s.IP,''), IFNULL(s.OnlineHours,0) FROM MEMB_INFO i LEFT JOIN MEMB_STAT s ON s.memb___id=i.memb___id ORDER BY i.memb___id LIMIT 1000", out err);
         if (err != null) { lblInfo.Text = "Lỗi: " + err; return; }
         rows = r;
         Fill();
@@ -97,15 +107,15 @@ class AccountPanel : Panel, IShown
         int online = 0;
         foreach (var r in rows)
         {
-            if (r.Length < 7) continue;
-            bool on = r[4] == "1";
+            if (r.Length < 8) continue;
+            bool on = r[5] == "1";
             if (on) online++;
             if (onlyOn && !on) continue;
             if (q.Length > 0 && r[0].IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0) continue;
-            bool blocked = r[3] == "1";
-            int i = grid.Rows.Add(r[0], r[1], r[2], blocked ? "Bị khóa" : "Bình thường", on ? "● Online" : "", on ? r[5] : "", r[6]);
-            if (blocked) grid.Rows[i].Cells[3].Style.ForeColor = Theme.Red;
-            if (on) grid.Rows[i].Cells[4].Style.ForeColor = Theme.Green;
+            bool blocked = r[4] == "1";
+            int i = grid.Rows.Add(r[0], r[1], r[2], r[3], blocked ? "Bị khóa" : "Bình thường", on ? "● Online" : "", on ? r[6] : "", r[7]);
+            if (blocked) grid.Rows[i].Cells[4].Style.ForeColor = Theme.Red;
+            if (on) grid.Rows[i].Cells[5].Style.ForeColor = Theme.Green;
         }
         lblInfo.Text = rows.Count + " tài khoản · " + online + " đang online";
     }
@@ -153,7 +163,7 @@ class AccountPanel : Panel, IShown
         if (!CheckName(id, "Tên tài khoản") || !CheckName(pw, "Mật khẩu")) return;
         if (Md5Enabled()) { MessageBox.Show("JoinServer đang bật mã hóa mật khẩu (MD5Encryption khác 0).\nLauncher chỉ tạo tài khoản được khi MD5Encryption=0.", "Tài khoản", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
         foreach (var r in rows) if (r.Length > 0 && string.Equals(r[0], id, StringComparison.OrdinalIgnoreCase)) { MessageBox.Show("Tài khoản \"" + id + "\" đã tồn tại.", "Tài khoản", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
-        Run("INSERT INTO MEMB_INFO (memb___id, memb__pwd, memb_name, sno__numb, bloc_code, AccountLevel, AccountExpireDate, Bloc_Expire, mail_addr) VALUES ('" + id + "','" + pw + "','" + id + "','111111111111111111','0'," + (int)numLevel.Value + ",'2099-12-31 00:00:00','1900-01-01 00:00:00',NULL)", "Đã tạo tài khoản " + id);
+        Run("INSERT INTO MEMB_INFO (memb___id, memb__pwd, memb_name, sno__numb, bloc_code, AccountLevel, AccountExpireDate, Bloc_Expire, mail_addr, WCoin) VALUES ('" + id + "','" + pw + "','" + id + "','111111111111111111','0'," + (int)numLevel.Value + ",NOW(),'1900-01-01 00:00:00',NULL,0)", "Đã tạo tài khoản " + id);
     }
 
     string Existing()
@@ -174,17 +184,39 @@ class AccountPanel : Panel, IShown
         Run("UPDATE MEMB_INFO SET memb__pwd='" + pw + "' WHERE memb___id='" + id + "'", "Đã đổi mật khẩu " + id);
     }
 
-    void SetLevel()
+    void AddWCoin()
     {
         string id = Existing(); if (id == null) return;
-        Run("UPDATE MEMB_INFO SET AccountLevel=" + (int)numLevel.Value + " WHERE memb___id='" + id + "'", "Đã đặt level " + (int)numLevel.Value + " cho " + id);
+        long amt = (long)numWCoin.Value;
+        Run("UPDATE MEMB_INFO SET WCoin = COALESCE(WCoin,0) + " + amt + " WHERE memb___id='" + id + "'", "Đã cộng " + amt + " WCoin cho " + id);
+    }
+
+    void SetWCoin()
+    {
+        string id = Existing(); if (id == null) return;
+        long amt = (long)numWCoin.Value;
+        Run("UPDATE MEMB_INFO SET WCoin = " + amt + " WHERE memb___id='" + id + "'", "Đã đặt " + amt + " WCoin cho " + id);
+    }
+
+    void GrantVipDays()
+    {
+        string id = Existing(); if (id == null) return;
+        int lv = Math.Max(1, (int)numLevel.Value);
+        int days = (int)numVipDays.Value;
+        Run("UPDATE MEMB_INFO SET AccountLevel=" + lv + ", AccountExpireDate=DATE_ADD(NOW(), INTERVAL " + days + " DAY) WHERE memb___id='" + id + "'", "Đã cấp VIP Lv" + lv + " (" + days + " ngày) cho " + id);
+    }
+
+    void RemoveVip()
+    {
+        string id = Existing(); if (id == null) return;
+        Run("UPDATE MEMB_INFO SET AccountLevel=0, AccountExpireDate=NOW() WHERE memb___id='" + id + "'", "Đã hủy VIP của " + id);
     }
 
     void ToggleBlock()
     {
         string id = Existing(); if (id == null) return;
         bool blocked = false;
-        foreach (var r in rows) if (r[0] == id && r.Length > 3) blocked = r[3] == "1";
+        foreach (var r in rows) if (r[0] == id && r.Length > 4) blocked = r[4] == "1";
         string q = blocked ? "Mở khóa tài khoản " + id + "?" : "Khóa tài khoản " + id + "? Người chơi sẽ không đăng nhập được.";
         if (MessageBox.Show(q, "Tài khoản", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
         Run("UPDATE MEMB_INFO SET bloc_code='" + (blocked ? "0" : "1") + "' WHERE memb___id='" + id + "'", (blocked ? "Đã mở khóa " : "Đã khóa ") + id);

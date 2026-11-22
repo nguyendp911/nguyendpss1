@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CustomComboUI.h"
+#include "Interface.h"
 #include "Protocol.h"
 #include "PrintPlayer.h"
 #include "stb.h"
@@ -83,9 +84,9 @@ static void GetComboButtonLayout(float* btnW, float* btnH, float* comboX, float*
 	*btnH = 22.0f;
 	*btnW = (*btnH) * asp;
 	*y = 8.0f;
-	// Aligned right next to the 2 Camera3D buttons (x = 8 and x = 8 + btnW + 3)
+	// Combo is pinned at slot 2 (after Camera 0,1); PK is collapsible at slot 6 (after Auto 3,4 and JewelBank 5)
 	*comboX = 8.0f + (*btnW + 3.0f) * 2.0f;
-	*pkX = 8.0f + (*btnW + 3.0f) * 3.0f;
+	*pkX = 8.0f + (*btnW + 3.0f) * 6.0f;
 }
 
 CCustomComboUI::CCustomComboUI()
@@ -430,17 +431,19 @@ void CCustomComboUI::Render()
 		DisableAlphaBlend();
 	}
 
-	// 2. PK Mode Button (Slot 2 = OFF steel swords, Slot 3 = ON crimson swords)
+	// 2. PK Mode Button (collapsible slot 6: Slot 2 = OFF steel swords, Slot 3 = ON crimson swords)
+	const bool showPkBtn = !HudIconBarCollapsed();
 	bool isPkActive = this->IsPKModeActive();
-	bool isPkHover = InComboRect(pkX, y, btnW, btnH);
-	float pkScale = isPkHover ? 1.06f : 1.0f;
-	float pkrw = btnW * pkScale;
-	float pkrh = btnH * pkScale;
-	float pkrx = pkX - (pkrw - btnW) * 0.5f;
-	float pkry = y - (pkrh - btnH) * 0.5f;
+	bool isPkHover = showPkBtn && InComboRect(pkX, y, btnW, btnH);
 
-	if (this->m_TexComboCS != 0)
+	if (showPkBtn && this->m_TexComboCS != 0)
 	{
+		float pkScale = isPkHover ? 1.06f : 1.0f;
+		float pkrw = btnW * pkScale;
+		float pkrh = btnH * pkScale;
+		float pkrx = pkX - (pkrw - btnW) * 0.5f;
+		float pkry = y - (pkrh - btnH) * 0.5f;
+
 		if (isPkActive)
 		{
 			float pulse = 0.82f + 0.18f * sinf((float)curTick * 0.010f);
@@ -515,7 +518,7 @@ void CCustomComboUI::UpdateMouse()
 		}
 	}
 
-	if (InComboRect(pkX, y, btnW, btnH))
+	if (!HudIconBarCollapsed() && InComboRect(pkX, y, btnW, btnH))
 	{
 		MouseOnWindow = true;
 		if (MouseLButtonPush)

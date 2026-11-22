@@ -6,6 +6,7 @@
 #include "GoldenArcher.h"
 #include "Guild.h"
 #include "GuildManager.h"
+#include "MarketManager.h"
 #include "QueryManager.h"
 #include "ServerManager.h"
 #include "SocketManager.h"
@@ -335,6 +336,68 @@ void DataServerProtocolCore(int index, BYTE head, BYTE* lpMsg, int size)
 				{
 					gGuild.GDGuildGlobalNoticeRecv((SDHP_GUILD_GLOBAL_NOTICE_RECV*)lpMsg);
 
+					break;
+				}
+			}
+
+			break;
+		}
+
+		case 0x80:
+		{
+			switch (((lpMsg[0] == 0xC1) ? lpMsg[3] : lpMsg[4]))
+			{
+				case 0x01:
+				{
+					gMarketManager.GDMarketGetItemsRecv((SDHP_MARKET_GET_ITEMS_RECV*)lpMsg, index);
+					break;
+				}
+
+				case 0x02:
+				{
+					gMarketManager.GDMarketAddItemRecv((SDHP_MARKET_ADD_ITEM_RECV*)lpMsg, index);
+					break;
+				}
+
+				case 0x03:
+				{
+					gMarketManager.GDMarketBuyItemRecv((SDHP_MARKET_BUY_ITEM_RECV*)lpMsg, index);
+					break;
+				}
+
+				case 0x04:
+				{
+					gMarketManager.GDMarketGetMyItemsRecv((SDHP_MARKET_MY_ITEMS_RECV*)lpMsg, index);
+					break;
+				}
+
+				case 0x05:
+				{
+					gMarketManager.GDMarketCancelItemRecv((SDHP_MARKET_CANCEL_ITEM_RECV*)lpMsg, index);
+					break;
+				}
+
+				case 0x06:
+				{
+					gMarketManager.GDMarketClaimItemRecv((SDHP_MARKET_CLAIM_ITEM_RECV*)lpMsg, index);
+					break;
+				}
+
+				case 0x07:
+				{
+					gMarketManager.GDBuyVipRecv((SDHP_BUY_VIP_RECV*)lpMsg, index);
+					break;
+				}
+
+				case 0x08:
+				{
+					gMarketManager.GDRankingGetRecv((SDHP_RANKING_GET_RECV*)lpMsg, index);
+					break;
+				}
+
+				case 0x09:
+				{
+					gMarketManager.GDCashShopBuyRecv((SDHP_CASHSHOP_BUY_RECV*)lpMsg, index);
 					break;
 				}
 			}

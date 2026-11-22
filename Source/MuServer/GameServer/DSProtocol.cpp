@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "DSProtocol.h"
+#include "PartyMatching.h"
 #include "BloodCastle.h"
 #include "ChaosBox.h"
 #include "CommandManager.h"
@@ -11,6 +12,8 @@
 #include "GoldenArcherBingo.h"
 #include "GameMain.h"
 #include "Guild.h"
+#include "Market.h"
+#include "CashShop.h"
 #include "ItemBagManager.h"
 #include "ItemStack.h"
 #include "ItemValue.h"
@@ -271,6 +274,68 @@ void DataServerProtocolCore(BYTE head, BYTE* lpMsg, int size)
 				{
 					gGuild.DGGuildInfoRecv((SDHP_GUILD_INFO_RECV*)lpMsg);
 
+					break;
+				}
+			}
+
+			break;
+		}
+
+		case 0x80:
+		{
+			switch (((lpMsg[0] == 0xC1) ? lpMsg[3] : lpMsg[4]))
+			{
+				case 0x01:
+				{
+					gMarket.DGMarketGetItemsRecv((SDHP_MARKET_GET_ITEMS_SEND*)lpMsg);
+					break;
+				}
+
+				case 0x02:
+				{
+					gMarket.DGMarketAddItemRecv((SDHP_MARKET_ADD_ITEM_SEND*)lpMsg);
+					break;
+				}
+
+				case 0x03:
+				{
+					gMarket.DGMarketBuyItemRecv((SDHP_MARKET_BUY_ITEM_SEND*)lpMsg);
+					break;
+				}
+
+				case 0x04:
+				{
+					gMarket.DGMarketMyItemsRecv((SDHP_MARKET_MY_ITEMS_SEND*)lpMsg);
+					break;
+				}
+
+				case 0x05:
+				{
+					gMarket.DGMarketCancelItemRecv((SDHP_MARKET_CANCEL_ITEM_SEND*)lpMsg);
+					break;
+				}
+
+				case 0x06:
+				{
+					gMarket.DGMarketClaimItemRecv((SDHP_MARKET_CLAIM_ITEM_SEND*)lpMsg);
+					break;
+				}
+
+				case 0x07:
+				{
+					gMarket.DGBuyVipRecv((SDHP_BUY_VIP_SEND*)lpMsg);
+					break;
+				}
+
+				case 0x08:
+				{
+					gMarket.DGRankingGetRecv((SDHP_RANKING_GET_SEND*)lpMsg);
+					break;
+				}
+
+				case 0x09:
+				{
+					gCashShop.DGCashShopBuyRecv((SDHP_CASHSHOP_BUY_SEND*)lpMsg);
 					break;
 				}
 			}
@@ -719,6 +784,8 @@ void DGCharacterInfoRecv(SDHP_CHARACTER_INFO_RECV* lpMsg)
 	gQuest.GCQuestInfoSend(lpObj->Index);
 
 	gReconnect.GetReconnectInfo(lpObj);
+
+	gPartyMatching.OnUserEnterGame(lpObj);
 
 	gSkillManager.SkillChangeUse(lpObj->Index);
 

@@ -233,15 +233,19 @@ void gObjSetExperienceTable()
 {
 	memset(gLevelExperience, 0, sizeof(gLevelExperience));
 
-	// Parámetros ajustables
-	double maxExperience = DWORD_MAX * 0.95; // Aproximar al máximo seguro
+	// Fixed Hardcore Non-Reset Level 1..1000 curve (independent of m_MaxCharacterLevel
+	// so staged level caps 300 -> 450 -> 700 -> 1000 never shift player EXP bars).
+	const double maxExperience = 4000000000.0;
 
-	// Ajustar el multiplicador dinámicamente
-	double scaleFactor = maxExperience / pow(gServerInfo.m_MaxCharacterLevel, 3);
-
-	for (int level = 1; level <= gServerInfo.m_MaxCharacterLevel; level++)
+	for (int level = 1; level <= MAX_CHARACTER_LEVEL; level++)
 	{
-		gLevelExperience[level] = (DWORD)(scaleFactor * pow(level, 3));
+		double ratio = (double)level / (double)MAX_CHARACTER_LEVEL;
+		DWORD exp = (DWORD)(maxExperience * pow(ratio, 2.35));
+		if (exp <= gLevelExperience[level - 1])
+		{
+			exp = gLevelExperience[level - 1] + 100;
+		}
+		gLevelExperience[level] = exp;
 	}
 }
 
@@ -1775,6 +1779,27 @@ void gObjUserDie(LPOBJ lpObj, LPOBJ lpTarget)
 	if (gGuild.GuildWarCheck(lpTarget, lpObj) != false)
 	{
 		return;
+	}
+
+	// Hardcore Non-Reset Death Penalty: lose 1.5% of current level EXP bar when killed by a monster (Lv > 10)
+	if (lpTarget != NULL && lpTarget->Type == OBJECT_MONSTER && lpObj->Level > 10 && lpObj->Level < gServerInfo.m_MaxCharacterLevel)
+	{
+		DWORD levelStart = gLevelExperience[lpObj->Level - 1];
+		DWORD levelEnd = gLevelExperience[lpObj->Level];
+		if (levelEnd > levelStart && lpObj->Experience > levelStart)
+		{
+			DWORD loss = (DWORD)((double)(levelEnd - levelStart) * 0.015);
+			DWORD available = lpObj->Experience - levelStart;
+			if (loss > available)
+			{
+				loss = available;
+			}
+			if (loss > 0)
+			{
+				lpObj->Experience -= loss;
+				gNotice.GCNoticeSend(lpObj->Index, 1, 0, 0, 0, 0, 0, "[Hardcore] Killed by monster: -%u EXP (1.5%%)!", loss);
+			}
+		}
 	}
 }
 

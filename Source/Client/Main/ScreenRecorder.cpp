@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ScreenRecorder.h"
+#include "Interface.h"
 #include "Sound.h"
 
 #undef WINVER
@@ -69,8 +70,8 @@ static void GetRecorderHudLayout(float* btnW, float* btnH, float* recX, float* y
 	*btnH = 22.0f;
 	*btnW = (*btnH) * asp;
 	*y = 8.0f;
-	// 7th button on top-left bar: Camera (0,1), Combo/PK (2,3), SmartAuto (4,5), Recorder (6)
-	*recX = 8.0f + (*btnW + 3.0f) * 6.0f;
+	// Collapsible slot 8: Pinned(0..5), PK(6), Market(7), Recorder(8)
+	*recX = 8.0f + (*btnW + 3.0f) * 8.0f;
 }
 
 CScreenRecorder::CScreenRecorder()
@@ -605,6 +606,9 @@ void CScreenRecorder::Render()
 {
 	if (SceneFlag != 5 || !Hero) return;
 
+	const bool collapsed = HudIconBarCollapsed();
+	if (collapsed && !this->m_Recording) return;
+
 	if (this->m_TexRecCS == 0)
 	{
 		this->LoadImages();
@@ -614,10 +618,10 @@ void CScreenRecorder::Render()
 	GetRecorderHudLayout(&btnW, &btnH, &recX, &y);
 
 	const bool rec = this->m_Recording;
-	const bool hov = SRHit(recX, y, btnW, btnH);
+	const bool hov = !collapsed && SRHit(recX, y, btnW, btnH);
 	const DWORD now = GetTickCount();
 
-	if (this->m_TexRecCS != 0)
+	if (!collapsed && this->m_TexRecCS != 0)
 	{
 		// Tile 0 (0.00..0.50): Idle Cold Steel camcorder | Tile 1 (0.50..1.00): Active crimson Stop
 		float u0 = rec ? 0.50f : 0.00f;
@@ -647,7 +651,7 @@ void CScreenRecorder::Render()
 		sprintf_s(tbuf, sizeof(tbuf), "REC %02u:%02u", sec / 60, sec % 60);
 		SRSetFont(g_hFontBold);
 		float tw = SRMeasureW(tbuf);
-		float px = recX + btnW + 4.0f;
+		float px = collapsed ? (8.0f + (btnW + 3.0f) * 7.0f + 1.0f) : (8.0f + (btnW + 3.0f) * 13.0f + 1.0f);
 		float py = y + 3.0f;
 		SRRect(px, py, tw + 10.0f, 16.0f, 0.75f, 0.14f, 0.18f, 0.92f);
 		SRRect(px + 1.0f, py + 1.0f, tw + 8.0f, 14.0f, 0.12f, 0.04f, 0.06f, 0.90f);
@@ -675,7 +679,7 @@ void CScreenRecorder::Render()
 
 bool CScreenRecorder::UpdateMouse()
 {
-	if (SceneFlag != 5 || !Hero) return false;
+	if (SceneFlag != 5 || !Hero || HudIconBarCollapsed()) return false;
 
 	float btnW, btnH, recX, y;
 	GetRecorderHudLayout(&btnW, &btnH, &recX, &y);

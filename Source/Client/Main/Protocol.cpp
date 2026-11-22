@@ -13,6 +13,11 @@
 #include "ItemManager.h"
 #include "ItemStack.h"
 #include "ItemValue.h"
+#include "JewelBankUI.h"
+#include "MarketWindow.h"
+#include "RankingUI.h"
+#include "CashShopUI.h"
+#include "PartyMatching.h"
 #include "Language.h"
 #include "MoveList.h"
 #include "PacketManager.h"
@@ -331,6 +336,107 @@ bool CProtocol::TranslateProtocol(BYTE head, BYTE* lpMsg, int Size)
 
 					return true;
 				}
+			}
+
+			break;
+		}
+
+		case 0x98:
+		{
+			switch (((lpMsg[0] == 0xC1) ? lpMsg[3] : lpMsg[4]))
+			{
+				case 0x01:
+				{
+					gMarketWindow.OnReceivePage(lpMsg);
+					return true;
+				}
+
+				case 0x02:
+				{
+					GC_MARKET_BUY_ANS* pMsg = (GC_MARKET_BUY_ANS*)lpMsg;
+					gMarketWindow.OnReceiveBuyResult(pMsg->result, pMsg->marketId);
+					return true;
+				}
+
+				case 0x03:
+				{
+					GC_MARKET_SELL_ANS* pMsg = (GC_MARKET_SELL_ANS*)lpMsg;
+					gMarketWindow.OnReceiveSellResult(pMsg->result);
+					return true;
+				}
+
+				case 0x04:
+				{
+					gMarketWindow.OnReceiveMyItems(lpMsg);
+					return true;
+				}
+
+				case 0x05:
+				{
+					GC_MARKET_CANCEL_SELL_ANS* pMsg = (GC_MARKET_CANCEL_SELL_ANS*)lpMsg;
+					gMarketWindow.OnReceiveCancelResult(pMsg->result, pMsg->marketId);
+					return true;
+				}
+
+				case 0x06:
+				{
+					GC_MARKET_CLAIM_PAYMENT_ANS* pMsg = (GC_MARKET_CLAIM_PAYMENT_ANS*)lpMsg;
+					gMarketWindow.OnReceiveClaimResult(pMsg->result, pMsg->marketId, pMsg->price, pMsg->priceType);
+					return true;
+				}
+
+				case 0x07:
+				{
+					GC_WCOIN_SEND* pMsg = (GC_WCOIN_SEND*)lpMsg;
+					gMarketWindow.SetMyWCoin(pMsg->wcoin);
+					return true;
+				}
+
+				case 0x08:
+				{
+					gRankingUI.OnRankingRecv(lpMsg);
+					return true;
+				}
+
+				case 0x09:
+				{
+					gRankingUI.OnBuyVipRecv(lpMsg);
+					return true;
+				}
+
+				case 0x10:
+				{
+					gCashShopUI.OnBuyRecv(lpMsg);
+					return true;
+				}
+
+				case 0x11:
+				{
+					gCashShopUI.OnListRecv(lpMsg);
+					return true;
+				}
+
+				case 0x20:
+				{
+					gJewelBankUI.OnStateRecv(lpMsg);
+
+					return true;
+				}
+			}
+
+			break;
+		}
+
+		case 0x99:
+		{
+			switch (((lpMsg[0] == 0xC1) ? lpMsg[3] : lpMsg[4]))
+			{
+				case 0x01: gPartyMatchingUI.OnListRecv(lpMsg); return true;
+				case 0x02: gPartyMatchingUI.OnRegisterRecv(lpMsg); return true;
+				case 0x03: gPartyMatchingUI.OnCancelRecv(lpMsg); return true;
+				case 0x04: gPartyMatchingUI.OnJoinRecv(lpMsg); return true;
+				case 0x05: gPartyMatchingUI.OnNotifyLeaderRecv(lpMsg); return true;
+				case 0x09: gPartyMatchingUI.OnExtInfoRecv(lpMsg); return true;
 			}
 
 			break;

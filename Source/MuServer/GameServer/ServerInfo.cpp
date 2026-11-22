@@ -8,6 +8,8 @@
 #include "CustomPkFree.h"
 #include "CustomSafeZone.h"
 #include "CustomCombo.h"
+#include "JewelBank.h"
+#include "CashShop.h"
 #include "CustomWing.h"
 #include "DefaultClassInfo.h"
 #include "DevilSquare.h"
@@ -179,6 +181,12 @@ void CServerInfo::ReadCustomInfo()
 	gSafeZone.Load(gPath.GetFullPath("Custom\\CustomSafeZone.txt"));
 
 	gCustomCombo.Load(gPath.GetFullPath("Custom\\CustomCombo.txt"));
+
+	char jewelBankIni[MAX_PATH];
+	strcpy_s(jewelBankIni, sizeof(jewelBankIni), gPath.GetFullPath("Custom\\JewelBank.ini"));
+	gJewelBank.Load(jewelBankIni, gPath.GetFullPath("Custom\\JewelBankData.txt"));
+
+	gCashShop.Load(gPath.GetFullPath("Custom\\CashShop.ini"));
 
 	LogAdd(LOG_BLUE, "[ServerInfo] Custom loaded successfully");
 }

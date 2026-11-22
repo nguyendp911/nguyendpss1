@@ -1,5 +1,7 @@
-﻿#include "StdAfx.h"
+#include "StdAfx.h"
 #include "Window.h"
+#include "MarketWindow.h"
+#include "PartyMatching.h"
 #include "Controller.h"
 #include "Font.h"
 #include "PingSystem.h"
@@ -205,6 +207,22 @@ LRESULT WINAPI CWindow::MyWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 				MouseRButtonPush = false;
 
 				gController.MouseWheel = 0;
+			}
+
+			break;
+		}
+
+		case WM_CHAR:
+		{
+			if (gMarketWindow.IsEditingPrice())
+			{
+				gMarketWindow.OnChar((wchar_t)wParam);
+				return 0;
+			}
+			if (gPartyMatchingUI.IsEditingInput())
+			{
+				gPartyMatchingUI.OnChar((wchar_t)wParam);
+				return 0;
 			}
 
 			break;

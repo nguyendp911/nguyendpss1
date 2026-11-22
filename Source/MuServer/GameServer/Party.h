@@ -114,6 +114,8 @@ public:
 
 	void ChangeLeader(int index, int number);
 
+	bool SetLeader(int index, int targetIndex);
+
 	bool AutoAcceptPartyRequest(LPOBJ lpObj, LPOBJ lpTarget);
 
 	void CGPartyRequestRecv(PMSG_PARTY_REQUEST_RECV* lpMsg, int aIndex);

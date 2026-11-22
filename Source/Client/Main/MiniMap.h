@@ -19,6 +19,8 @@ public:
 
 	bool GetMiniMapState();
 
+	float GetBottomY();
+
 	void Toggle();
 
 	void UpdateMouse();

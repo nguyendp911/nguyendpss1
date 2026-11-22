@@ -83,7 +83,7 @@ class LogPanel : Panel, IShown
         string keepTitle = keep != null ? keep.ToString() : null;
         cbSrc.Items.Clear();
         cbSrc.Items.Add(new Src { Title = "MuLauncher", File = Path.Combine(baseDir, "MuLauncher.log") });
-        foreach (string srv in new[] { "ConnectServer", "JoinServer", "DataServer", "GameServer" })
+        foreach (string srv in new[] { "ConnectServer", "JoinServer", "DataServer", "GameServer", "GameServerVIP" })
         {
             string sd = Path.Combine(baseDir, srv);
             if (!Directory.Exists(sd)) continue;

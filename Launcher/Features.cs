@@ -78,6 +78,7 @@ partial class MainForm
     bool skipAutoBackup;
     LogPanel logPanel;
     AccountPanel accPanel;
+    GameAdminPanel gameAdminPanel;
     ToolsPanel toolsPanel;
     DateTime lastBackup = DateTime.Now;
     DateTime nextOnline = DateTime.MinValue;
@@ -137,9 +138,11 @@ partial class MainForm
     {
         logPanel = new LogPanel();
         accPanel = new AccountPanel(this);
+        gameAdminPanel = new GameAdminPanel(this);
         toolsPanel = new ToolsPanel(this);
         AddExtra(tabFlow, card, "Nhật ký", logPanel);
         AddExtra(tabFlow, card, "Tài khoản", accPanel);
+        AddExtra(tabFlow, card, "Quản lý Game", gameAdminPanel);
         AddExtra(tabFlow, card, "Công cụ", toolsPanel);
     }
 

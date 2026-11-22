@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include "SmartAutoHelperUI.h"
+#include "Interface.h"
 #include "AutoHelper.h"
 #include "AutoAdvancedUI.h"
 #include "Defines.h"
@@ -184,9 +185,9 @@ static void GetAutoHudButtonLayout(float* btnW, float* btnH, float* playX, float
 	*btnH = 22.0f;
 	*btnW = (*btnH) * asp;
 	*y = 8.0f;
-	// Aligned pixel-perfectly after Camera (0,1) and Combo (2,3)
-	*playX = 8.0f + (*btnW + 3.0f) * 4.0f;
-	*cfgX  = 8.0f + (*btnW + 3.0f) * 5.0f;
+	// Pinned slots 3,4: right after Camera (0,1) and Combo (2)
+	*playX = 8.0f + (*btnW + 3.0f) * 3.0f;
+	*cfgX  = 8.0f + (*btnW + 3.0f) * 4.0f;
 }
 
 // =========================================================================

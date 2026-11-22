@@ -4,6 +4,7 @@
 #include <sstream>
 #include <map>
 #include "AutoHelper.h"
+#include "PartyMatching.h"
 #include "Buff.h"
 #include "Defines.h"
 #include "HealthBar.h"
@@ -399,8 +400,8 @@ void CAutoHelper::Work()
 		return;
 	}
 
-	// Check return to town (SafeZone)
-	if (!this->m_OriginSafeZone && *(BYTE*)(Hero + 0x34E) != 0)
+	// Check return to town (SafeZone) — do not stop if actively following Party Leader
+	if (!this->m_OriginSafeZone && *(BYTE*)(Hero + 0x34E) != 0 && !this->IsFollowingLeader())
 	{
 		this->Stop();
 		CreateNotice("[SmartAuto] Returned to safe zone - Auto stopped!", 1);
@@ -553,33 +554,49 @@ bool CAutoHelper::AutoFollow()
 	// The leader is in another map
 	if (leader->map != World)
 	{
-		if (this->m_Config.FollowTeleport && (now - this->m_LastFollowTick) >= 15000)
+		if ((now - this->m_LastFollowTick) >= 15000)
 		{
 			this->m_LastFollowTick = now;
+			gPartyMatchingUI.RequestMoveToLeader();
 		}
 
 		return true;
 	}
 
-	int dx = (int)leader->x - heroX;
-	int dy = (int)leader->y - heroY;
+	// Prefer live viewport coordinates when the Leader is on screen (much fresher than Party[0].x/y)
+	int targetX = (int)leader->x;
+	int targetY = (int)leader->y;
+	for (int i = 0; i < MAX_MAIN_VIEWPORT; i++)
+	{
+		DWORD vp = CharactersClient + (i * 916);
+		if (*(BYTE*)(vp) == 0 || vp == Hero) continue;
+		if (*(BYTE*)(vp + 0x84) == 1 && _strnicmp((char*)(vp + 0x1C1), leader->Name, 10) == 0)
+		{
+			targetX = (int)(*(float*)(vp + 16) / 100.0f);
+			targetY = (int)(*(float*)(vp + 20) / 100.0f);
+			break;
+		}
+	}
+
+	int dx = targetX - heroX;
+	int dy = targetY - heroY;
 	int dist = (int)sqrt((float)(dx * dx + dy * dy));
 
-	if (dist > 8)
+	if (dist > 3)
 	{
-		if ((now - this->m_LastFollowMoveTick) >= 1000)
+		if ((now - this->m_LastFollowMoveTick) >= 600)
 		{
 			this->m_LastFollowMoveTick = now;
 
-			this->MoveTo((int)leader->x, (int)leader->y);
+			this->MoveTo(targetX, targetY);
 		}
 
 		return true;
 	}
 
 	// Close enough: the hunting spot follows the leader
-	this->m_OriginX = (int)leader->x;
-	this->m_OriginY = (int)leader->y;
+	this->m_OriginX = targetX;
+	this->m_OriginY = targetY;
 
 	return false;
 }

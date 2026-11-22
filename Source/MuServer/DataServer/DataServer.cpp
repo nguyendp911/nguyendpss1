@@ -4,6 +4,7 @@
 #include "AllowableIpList.h"
 #include "BadSyntax.h"
 #include "GuildManager.h"
+#include "MarketManager.h"
 #include "MiniDump.h"
 #include "QueryManager.h"
 #include "ServerDisplayer.h"
@@ -97,6 +98,8 @@ int main()
 				SetTimer(hWnd, TIMER_1000, 1000, 0);
 
 				gGuildManager.Init();
+
+				gMarketManager.Init();
 			}
 		}
 	}

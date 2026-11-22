@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Camera3D.h"
+#include "Interface.h"
 #include "MapManager.h"
 #include "stb.h"
 

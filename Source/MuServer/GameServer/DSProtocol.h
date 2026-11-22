@@ -396,3 +396,200 @@ void DGGlobalWhisperEchoRecv(SDHP_GLOBAL_WHISPER_ECHO_RECV* lpMsg);
 void GDRankingBloodCastleSaveSend(int aIndex, DWORD Score);
 
 void GDRankingDevilSquareSaveSend(int aIndex, DWORD Score);
+
+//**********************************************//
+//********** Market System (0x80) **************//
+//**********************************************//
+
+struct SDHP_MARKET_ITEM_INFO
+{
+	DWORD id;
+	char sellerAccount[11];
+	char sellerName[11];
+	BYTE itemByte[10];
+	int itemIndex;
+	int itemLevel;
+	int itemCategory;
+	DWORD price;
+	BYTE priceType;
+	BYTE status;
+	char buyerName[11];
+};
+
+struct SDHP_MARKET_GET_ITEMS_RECV
+{
+	PSBMSG_HEAD header; // C1:80:01
+	WORD index;
+	char account[11];
+	BYTE category;
+	BYTE page;
+};
+
+struct SDHP_MARKET_GET_ITEMS_SEND
+{
+	PSWMSG_HEAD header; // C2:80:01
+	WORD index;
+	BYTE category;
+	BYTE page;
+	BYTE totalPages;
+	WORD totalItems;
+	BYTE count;
+	DWORD myWCoin;
+};
+
+struct SDHP_MARKET_ADD_ITEM_RECV
+{
+	PSBMSG_HEAD header; // C1:80:02
+	WORD index;
+	char account[11];
+	char name[11];
+	BYTE itemByte[10];
+	int itemIndex;
+	int itemLevel;
+	int itemCategory;
+	DWORD price;
+	BYTE priceType;
+};
+
+struct SDHP_MARKET_ADD_ITEM_SEND
+{
+	PSBMSG_HEAD header; // C1:80:02
+	WORD index;
+	BYTE result;
+	DWORD marketId;
+};
+
+struct SDHP_MARKET_BUY_ITEM_RECV
+{
+	PSBMSG_HEAD header; // C1:80:03
+	WORD index;
+	DWORD marketId;
+	char buyerAccount[11];
+	char buyerName[11];
+};
+
+struct SDHP_MARKET_BUY_ITEM_SEND
+{
+	PSBMSG_HEAD header; // C1:80:03
+	WORD index;
+	BYTE result;
+	DWORD marketId;
+	char sellerAccount[11];
+	char sellerName[11];
+	BYTE itemByte[10];
+	DWORD price;
+	BYTE priceType;
+};
+
+struct SDHP_MARKET_MY_ITEMS_RECV
+{
+	PSBMSG_HEAD header; // C1:80:04
+	WORD index;
+	char account[11];
+};
+
+struct SDHP_MARKET_MY_ITEMS_SEND
+{
+	PSWMSG_HEAD header; // C2:80:04
+	WORD index;
+	BYTE count;
+	DWORD myWCoin;
+};
+
+struct SDHP_MARKET_CANCEL_ITEM_RECV
+{
+	PSBMSG_HEAD header; // C1:80:05
+	WORD index;
+	DWORD marketId;
+	char account[11];
+};
+
+struct SDHP_MARKET_CANCEL_ITEM_SEND
+{
+	PSBMSG_HEAD header; // C1:80:05
+	WORD index;
+	BYTE result;
+	DWORD marketId;
+	BYTE itemByte[10];
+};
+
+struct SDHP_MARKET_CLAIM_ITEM_RECV
+{
+	PSBMSG_HEAD header; // C1:80:06
+	WORD index;
+	DWORD marketId;
+	char account[11];
+};
+
+struct SDHP_MARKET_CLAIM_ITEM_SEND
+{
+	PSBMSG_HEAD header; // C1:80:06
+	WORD index;
+	BYTE result;
+	DWORD marketId;
+	DWORD price;
+	BYTE priceType;
+};
+
+struct SDHP_BUY_VIP_RECV
+{
+	PSBMSG_HEAD header; // C1:80:07
+	WORD index;
+	char account[11];
+	DWORD cost;
+	WORD days;
+};
+
+struct SDHP_BUY_VIP_SEND
+{
+	PSBMSG_HEAD header; // C1:80:07
+	WORD index;
+	BYTE result;        // 0: Fail, 1: Success, 2: Not enough WCoin
+	WORD days;
+	DWORD remainWCoin;
+};
+
+struct SDHP_RANKING_GET_RECV
+{
+	PSBMSG_HEAD header; // C1:80:08
+	WORD index;
+	BYTE type;          // 0: Top Level, 1: Top Guild, 2: DW, 3: DK, 4: ELF, 5: MG
+	char account[11];
+};
+
+struct SDHP_RANKING_ENTRY
+{
+	char name[11];
+	DWORD value;
+	BYTE extra;
+};
+
+struct SDHP_RANKING_GET_SEND
+{
+	PSWMSG_HEAD header; // C2:80:08
+	WORD index;
+	BYTE type;
+	BYTE count;
+	DWORD myWCoin;
+	SDHP_RANKING_ENTRY entries[10];
+};
+
+struct SDHP_CASHSHOP_BUY_RECV
+{
+	PSBMSG_HEAD header; // C1:80:09
+	WORD index;
+	char account[11];
+	BYTE product;       // 0 = query WCoin only, 1..64 = buy product
+	BYTE param;         // target class (0..3) for class change
+	DWORD cost;
+};
+
+struct SDHP_CASHSHOP_BUY_SEND
+{
+	PSBMSG_HEAD header; // C1:80:09
+	WORD index;
+	BYTE result;        // 0: Fail, 1: Success, 2: Not enough WCoin
+	BYTE product;
+	BYTE param;
+	DWORD remainWCoin;
+};

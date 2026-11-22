@@ -40,6 +40,9 @@ void HudEnd();
 void HudDrawExpBar(float frac, float* hx, float* hy, float* hw, float* hh);
 void HudDrawAgBar(float frac);
 void HudButtonActive(int index);
+bool HudIconBarCollapsed();
+void HudIconBarUpdateMouse();
+void HudIconBarRender();
 
 class Interface
 {

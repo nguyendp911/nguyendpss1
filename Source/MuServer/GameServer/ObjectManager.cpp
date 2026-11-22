@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ObjectManager.h"
+#include "PartyMatching.h"
 #include "Attack.h"
 #include "BattleSoccerManager.h"
 #include "BloodCastle.h"
@@ -635,6 +636,7 @@ bool CObjectManager::CharacterGameClose(int aIndex)
 		}
 		else
 		{
+			gPartyMatching.OnUserDisconnect(lpObj);
 			gParty.DelMember(lpObj->PartyNumber, lpObj->Index);
 		}
 	}

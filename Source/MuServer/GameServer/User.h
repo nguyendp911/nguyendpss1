@@ -369,6 +369,7 @@ struct OBJECTSTRUCT
 	DWORD Experience;
 	DWORD NextExperience;
 	DWORD Money;
+	DWORD WCoin;
 	int Strength;
 	int Dexterity;
 	int Vitality;

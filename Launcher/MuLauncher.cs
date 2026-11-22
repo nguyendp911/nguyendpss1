@@ -111,8 +111,8 @@ partial class MainForm : Form
         var bar = new Panel { Dock = DockStyle.Top, Height = 62, BackColor = Theme.Panel, Padding = new Padding(14, 0, 14, 0) };
         var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, BackColor = Theme.Panel, WrapContents = false, Padding = new Padding(0, 13, 0, 0) };
 
-        flow.Controls.Add(MakeBtn("▶  Chạy tất cả", Theme.Green, false, "Bật MariaDB (nếu cần) rồi bật 4 server lần lượt", delegate { StartAll(); }));
-        flow.Controls.Add(MakeBtn("■  Tắt tất cả", Theme.Red, true, "Tắt GameServer, DataServer, JoinServer, ConnectServer", delegate { StopAll(); }));
+        flow.Controls.Add(MakeBtn("▶  Chạy tất cả", Theme.Green, false, "Bật MariaDB (nếu cần) rồi bật 5 server lần lượt", delegate { StartAll(); }));
+        flow.Controls.Add(MakeBtn("■  Tắt tất cả", Theme.Red, true, "Tắt GameServerVIP, GameServer, DataServer, JoinServer, ConnectServer", delegate { StopAll(); }));
         flow.Controls.Add(Divider());
         flow.Controls.Add(MakeBtn("▶  Chạy tab", Theme.Muted, true, "Chạy server của tab đang chọn", delegate { StartSelected(); }));
         flow.Controls.Add(MakeBtn("■  Tắt tab", Theme.Muted, true, "Tắt server của tab đang chọn", delegate { StopSelected(); }));
@@ -140,7 +140,7 @@ partial class MainForm : Form
         content.Controls.Add(card);
 
         int idx = 0;
-        foreach (string n in new[] { "ConnectServer", "JoinServer", "DataServer", "GameServer" })
+        foreach (string n in new[] { "ConnectServer", "JoinServer", "DataServer", "GameServer", "GameServerVIP" })
         {
             var s = new Srv { Name = n };
             s.Host = new Panel { Dock = DockStyle.Fill, BackColor = Color.Black };
@@ -170,7 +170,7 @@ partial class MainForm : Form
         var pills = new FlowLayoutPanel { Dock = DockStyle.Right, AutoSize = true, BackColor = Theme.Panel, WrapContents = false, FlowDirection = FlowDirection.RightToLeft };
         lblGame = MakePill("Game: 0");
         lblDb = MakePill("MariaDB: tắt");
-        lblSrv = MakePill("Server: 0/4");
+        lblSrv = MakePill("Server: 0/" + servers.Count);
         lblOnline = MakePill("Online: -");
         pills.Controls.Add(lblGame);
         pills.Controls.Add(lblOnline);
@@ -301,6 +301,21 @@ partial class MainForm : Form
 
     void StartSelected() { var s = Selected(); if (s != null) StartSrv(s); else Log("Tab này không phải server"); }
     void StopSelected() { var s = Selected(); if (s != null) StopSrv(s); else Log("Tab này không phải server"); }
+
+    public int ReloadGameServers(int cmdId, string label)
+    {
+        int count = 0;
+        foreach (var s in servers)
+        {
+            if ((s.Name == "GameServer" || s.Name == "GameServerVIP") && Running(s) && s.Hwnd != IntPtr.Zero && IsWindow(s.Hwnd))
+            {
+                PostMessage(s.Hwnd, WM_COMMAND, (IntPtr)cmdId, IntPtr.Zero);
+                count++;
+            }
+        }
+        if (count > 0) Log("Đã gửi " + label + " tới " + count + " GameServer");
+        return count;
+    }
 
     void StopDb()
     {
@@ -499,8 +514,8 @@ partial class MainForm : Form
         lblDb.ForeColor = dbUp ? Theme.Green : (dbPending ? Theme.Amber : Theme.Red);
         int runCount = 0;
         foreach (var sv in servers) if (Running(sv)) runCount++;
-        lblSrv.Text = "Server: " + runCount + "/4";
-        lblSrv.ForeColor = runCount == 4 ? Theme.Green : (runCount > 0 ? Theme.Amber : Theme.Muted);
+        lblSrv.Text = "Server: " + runCount + "/" + servers.Count;
+        lblSrv.ForeColor = runCount == servers.Count ? Theme.Green : (runCount > 0 ? Theme.Amber : Theme.Muted);
 
         foreach (var s in servers)
         {

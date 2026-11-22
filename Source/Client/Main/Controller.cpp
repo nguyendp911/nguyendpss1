@@ -2,8 +2,14 @@
 #include "Controller.h"
 #include "AutoHelper.h"
 #include "Camera3D.h"
+#include "CommandWindow.h"
 #include "CustomComboUI.h"
 #include "ScreenRecorder.h"
+#include "JewelBankUI.h"
+#include "MarketWindow.h"
+#include "RankingUI.h"
+#include "CashShopUI.h"
+#include "PartyMatching.h"
 #include "SmartAutoHelperUI.h"
 #include "EventTimer.h"
 #include "ItemManager.h"
@@ -195,7 +201,7 @@ LRESULT Controller::Keyboard(int nCode, WPARAM wParam, LPARAM lParam)
 		{
 			if (wParam == 'C' && ((GetKeyState(VK_SHIFT) & 0x8000) != 0))
 			{
-				if (!CheckInputInterfaces())
+				if (!CheckInputInterfaces() && !gPartyMatchingUI.IsEditingInput())
 				{
 					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
 					{
@@ -207,7 +213,7 @@ LRESULT Controller::Keyboard(int nCode, WPARAM wParam, LPARAM lParam)
 
 			if (wParam == 'P' && ((GetKeyState(VK_SHIFT) & 0x8000) != 0))
 			{
-				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused())
+				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused() && !gPartyMatchingUI.IsEditingInput())
 				{
 					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
 					{
@@ -219,7 +225,7 @@ LRESULT Controller::Keyboard(int nCode, WPARAM wParam, LPARAM lParam)
 
 			if ((wParam == VK_HOME || wParam == 'Z') && SceneFlag == 5 && Hero)
 			{
-				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused())
+				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused() && !gPartyMatchingUI.IsEditingInput())
 				{
 					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
 					{
@@ -231,11 +237,103 @@ LRESULT Controller::Keyboard(int nCode, WPARAM wParam, LPARAM lParam)
 
 			if (wParam == VK_END && SceneFlag == 5 && Hero)
 			{
-				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused())
+				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused() && !gPartyMatchingUI.IsEditingInput())
 				{
 					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
 					{
 						gSmartAutoHelperUI.Toggle();
+					}
+					return 1;
+				}
+			}
+
+			if (wParam == 'J' && SceneFlag == 5 && Hero)
+			{
+				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused() && !gMarketWindow.IsEditingPrice() && !gPartyMatchingUI.IsEditingInput())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gJewelBankUI.Toggle();
+					}
+					return 1;
+				}
+			}
+
+			if (wParam == VK_F5 && SceneFlag == 5 && Hero)
+			{
+				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused() && !gMarketWindow.IsEditingPrice() && !gPartyMatchingUI.IsEditingInput())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gMarketWindow.Toggle();
+					}
+					return 1;
+				}
+			}
+
+			if (wParam == VK_F6 && SceneFlag == 5 && Hero)
+			{
+				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused() && !gMarketWindow.IsEditingPrice() && !gPartyMatchingUI.IsEditingInput())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gRankingUI.Toggle();
+					}
+					return 1;
+				}
+			}
+
+			if (wParam == VK_F7 && SceneFlag == 5 && Hero)
+			{
+				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused() && !gMarketWindow.IsEditingPrice() && !gPartyMatchingUI.IsEditingInput())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gRankingUI.ToggleVipShop();
+					}
+					return 1;
+				}
+			}
+
+			if (wParam == 'D' && SceneFlag == 5 && Hero)
+			{
+				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused() && !gMarketWindow.IsEditingPrice() && !gPartyMatchingUI.IsEditingInput())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gCommandWindow.Toggle();
+					}
+					return 1;
+				}
+			}
+
+			if (wParam == 'X' && SceneFlag == 5 && Hero)
+			{
+				if (!CheckInputInterfaces() && !gSmartAutoHelperUI.IsItemInputFocused() && !gMarketWindow.IsEditingPrice() && !gPartyMatchingUI.IsEditingInput())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gCashShopUI.Toggle();
+					}
+					return 1;
+				}
+			}
+
+			if (wParam == VK_ESCAPE && SceneFlag == 5 && Hero)
+			{
+				if (gPartyMatchingUI.IsOpen())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gPartyMatchingUI.Close();
+					}
+					return 1;
+				}
+				if (gCommandWindow.IsOpen() || gCommandWindow.IsActiveMode())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gCommandWindow.Show(false);
 					}
 					return 1;
 				}
@@ -321,7 +419,7 @@ LRESULT Controller::Keyboard(int nCode, WPARAM wParam, LPARAM lParam)
 
 void Controller::CheckKeyboardKeys()
 {
-	if (gSmartAutoHelperUI.IsItemInputFocused())
+	if (gSmartAutoHelperUI.IsItemInputFocused() || gMarketWindow.IsEditingPrice() || gPartyMatchingUI.IsEditingInput())
 	{
 		return;
 	}

@@ -3,11 +3,18 @@
 #include "AutoHelper.h"
 #include "Buff.h"
 #include "Camera3D.h"
+#include "CommandWindow.h"
 #include "CustomComboUI.h"
 #include "ScreenRecorder.h"
+#include "JewelBankUI.h"
+#include "MarketWindow.h"
+#include "RankingUI.h"
+#include "CashShopUI.h"
+#include "PartyMatching.h"
 #include "SmartAutoHelperUI.h"
 #include "LoginScale.h"
 #include "Camera3D.h"
+#include "CommandWindow.h"
 #include "CustomComboUI.h"
 #include "EventTimer.h"
 #include "ItemPost.h"
@@ -621,17 +628,18 @@ static void _cdecl HudUpdateHook()
 {
 	const int backupMouseY = MouseY;
 
-	// (y >= 396: below the bottom edge of the right / left windows, so their own hit tests are not displaced)
-	// the skill list that pops up above the skill slot is drawn HUD_SHIFT_Y units higher too, so its click areas follow it
-	// (only while no window is open: the windows' own hit tests are in plain coordinates)
-	const bool overSkillPopup = (!CheckRightInterfaces() && MouseX >= 250 && MouseX < 390 && MouseY >= 318 && MouseY < 396);
+	// The skill list popup above the skill slot is drawn HUD_SHIFT_Y units higher too, so its click areas follow it
+	// across the full width of the bar (both rows, y = 285..390 -> shifted 325..430, strictly above the old y=432 bar).
+	const bool sideWinOpen = (InventoryOpened != 0 || CharacterOpened != 0 || PartyOpened != 0 || GuildOpened != 0 || GuildCreatorOpened != 0);
+	const int skillMaxX = sideWinOpen ? 470 : 620;
+	const bool overSkillPopup = (MouseX >= 20 && MouseX < skillMaxX && MouseY >= 285 && MouseY < 390);
 
 	if (MouseX >= 570 && MouseX < 640 && MouseY >= 432 && MouseY < 480)
 	{
 		// Bottom-right Guild HUD button was removed: prevent ghost clicks on its original hitbox
 		MouseY = -100;
 	}
-	else if (overSkillPopup || (MouseY >= 396 && MouseY < 480 && MouseX >= 170 && MouseX < 470))
+	else if (overSkillPopup || (MouseY >= 390 && MouseY < 480 && MouseX >= 170 && MouseX < 470))
 	{
 		MouseY += (int)HUD_SHIFT_Y;
 	}
@@ -1155,6 +1163,9 @@ void Interface::Init()
 
 	SetCompleteHook(0xE8, 0x004BE701, &ChatInputButtonHook);
 
+	// Disable stock Party window & top-right mini party list (0x004EF160, cdecl) — replaced by Cold Steel CPartyMatchingUI
+	MemorySet(0x004F5B84, 0x90, 5);
+
 	SetCompleteHook(0xE8, 0x0052698A, &this->RenderLogInScene);
 
 	SetCompleteHook(0xE8, 0x005269A2, &this->RenderCharacterScene);
@@ -1282,6 +1293,14 @@ void Interface::LoadImages()
 	gSmartAutoHelperUI.LoadImages();
 
 	gScreenRecorder.LoadImages();
+
+	gJewelBankUI.LoadImages();
+
+	gMarketWindow.LoadImages();
+
+	gRankingUI.LoadImages();
+
+	gCashShopUI.LoadImages();
 }
 
 void Interface::MyUpdateWindowsMouse()
@@ -1305,6 +1324,8 @@ void Interface::MyUpdateWindowsMouse()
 
 	gMiniMap.UpdateMouse();
 
+	HudIconBarUpdateMouse();
+
 	Camera3D.UpdateMouse();
 
 	gCustomComboUI.UpdateMouse();
@@ -1312,6 +1333,18 @@ void Interface::MyUpdateWindowsMouse()
 	gSmartAutoHelperUI.UpdateMouse();
 
 	gScreenRecorder.UpdateMouse();
+
+	gJewelBankUI.UpdateMouse();
+
+	gMarketWindow.UpdateMouse();
+
+	gRankingUI.UpdateMouse();
+
+	gCommandWindow.UpdateMouse();
+
+	gCashShopUI.UpdateMouse();
+
+	gPartyMatchingUI.UpdateMouse();
 
 	gSmartAutoHelperUI.UpdateKeyboard();
 
@@ -1346,9 +1379,23 @@ void Interface::MyRenderWindows()
 
 	gSmartAutoHelperUI.Render();
 
+	gJewelBankUI.Render();
+
+	gMarketWindow.Render();
+
+	gRankingUI.Render();
+
+	gCommandWindow.Render();
+
+	gCashShopUI.Render();
+
+	gPartyMatchingUI.Render();
+
 	gScreenRecorder.CaptureFrame();
 
 	gScreenRecorder.Render();
+
+	HudIconBarRender();
 }
 
 void Interface::RenderLeftDragon(int Texture, float x, float y, float Width, float Height, float u, float v, float uWidth, float vHeight, bool Scale, bool StartScale)
@@ -1441,4 +1488,210 @@ bool Interface::IsWorkZone(short ObjectID)
 	}
 
 	return true;
+}
+
+// =========================================================================
+// Top-Left HUD Shortcut Bar Collapse / Expand (Cold Steel HD)
+// Matches reference repo: starts collapsed, auto-collapses after 15s idle.
+// =========================================================================
+static int s_HudIconBarState = -1; // -1 = uninitialized, 1 = collapsed, 0 = expanded
+static DWORD s_HudIconBarOpenTick = 0;
+
+bool HudIconBarCollapsed()
+{
+	if (s_HudIconBarState < 0)
+	{
+		s_HudIconBarState = 1; // collapsed on startup
+		s_HudIconBarOpenTick = GetTickCount();
+	}
+	return (s_HudIconBarState == 1);
+}
+
+static void GetHudIconBarToggleRect(float* outX, float* outY, float* outW, float* outH)
+{
+	const float asp = (g_fScreenRate_x > 0.0f) ? (g_fScreenRate_y / g_fScreenRate_x) : 0.75f;
+	const float btnH = 22.0f;
+	const float btnW = btnH * asp;
+	*outW = btnW;
+	*outH = btnH;
+	*outY = 8.0f;
+	// Pinned (always visible): Camera(0,1), Combo(2), Auto(3,4), JewelBank(5) -> toggle at slot 6 when collapsed
+	// Expanded adds: PK(6), Market(7), Recorder(8), TOP(9), VIP(10), CashShop(11) -> toggle at slot 12 when expanded
+	*outX = HudIconBarCollapsed() ? (8.0f + (btnW + 3.0f) * 6.0f) : (8.0f + (btnW + 3.0f) * 12.0f);
+}
+
+void HudIconBarUpdateMouse()
+{
+	if (SceneFlag != MAIN_SCENE || !Hero)
+	{
+		return;
+	}
+
+	float tx, ty, tw, th;
+	GetHudIconBarToggleRect(&tx, &ty, &tw, &th);
+
+	// Auto-collapse after 15 seconds if mouse is not over the shortcut bar
+	if (!HudIconBarCollapsed())
+	{
+		const float barRight = tx + tw + 8.0f;
+		if (MouseX <= (int)barRight && MouseY <= 40)
+		{
+			s_HudIconBarOpenTick = GetTickCount();
+		}
+		else if ((GetTickCount() - s_HudIconBarOpenTick) >= 15000)
+		{
+			s_HudIconBarState = 1;
+			return;
+		}
+	}
+
+	if (MouseX >= (int)tx && MouseX <= (int)(tx + tw) && MouseY >= (int)ty && MouseY <= (int)(ty + th))
+	{
+		MouseOnWindow = true;
+		if (MouseLButtonPush)
+		{
+			MouseLButtonPush = false;
+			MouseLButton = false;
+			MouseLButtonPop = false;
+			PlayBuffer(25, 0, 0);
+			s_HudIconBarState = HudIconBarCollapsed() ? 0 : 1;
+			s_HudIconBarOpenTick = GetTickCount();
+		}
+	}
+}
+
+static GLuint s_TexHudToggleCS = 0;
+
+static void LoadHudToggleTexture()
+{
+	if (s_TexHudToggleCS != 0) return;
+
+	int w = 0, h = 0, ch = 0;
+	unsigned char* data = stbi_load("Data\\Interface\\HudToggleCS.png", &w, &h, &ch, 4);
+	if (data && w > 0 && h > 0)
+	{
+		GLuint tex = 0;
+		glGenTextures(1, &tex);
+		glBindTexture(GL_TEXTURE_2D, tex);
+
+		int mw = w, mh = h;
+		unsigned char* cur = data;
+		for (int level = 0; ; level++)
+		{
+			glTexImage2D(GL_TEXTURE_2D, level, GL_RGBA, mw, mh, 0, GL_RGBA, GL_UNSIGNED_BYTE, cur);
+			if (mw == 1 && mh == 1) break;
+			int nw = (mw > 1) ? (mw / 2) : 1;
+			int nh = (mh > 1) ? (mh / 2) : 1;
+			unsigned char* dst = (unsigned char*)malloc((size_t)nw * nh * 4);
+			if (!dst) break;
+			for (int y = 0; y < nh; y++)
+			{
+				for (int x = 0; x < nw; x++)
+				{
+					int sx = x * 2, sy = y * 2;
+					int sx1 = (sx + 1 < mw) ? sx + 1 : sx;
+					int sy1 = (sy + 1 < mh) ? sy + 1 : sy;
+					const unsigned char* p00 = cur + ((sy * mw + sx) * 4);
+					const unsigned char* p10 = cur + ((sy * mw + sx1) * 4);
+					const unsigned char* p01 = cur + ((sy1 * mw + sx) * 4);
+					const unsigned char* p11 = cur + ((sy1 * mw + sx1) * 4);
+					unsigned char* out = dst + ((y * nw + x) * 4);
+					for (int c = 0; c < 4; c++)
+					{
+						out[c] = (unsigned char)((p00[c] + p10[c] + p01[c] + p11[c] + 2) >> 2);
+					}
+				}
+			}
+			if (cur != data) free(cur);
+			cur = dst;
+			mw = nw;
+			mh = nh;
+		}
+		if (cur != data) free(cur);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		s_TexHudToggleCS = tex;
+		stbi_image_free(data);
+	}
+}
+
+void HudIconBarRender()
+{
+	if (SceneFlag != MAIN_SCENE || !Hero)
+	{
+		return;
+	}
+
+	if (s_TexHudToggleCS == 0) LoadHudToggleTexture();
+
+	float tx, ty, tw, th;
+	GetHudIconBarToggleRect(&tx, &ty, &tw, &th);
+
+	const bool collapsed = HudIconBarCollapsed();
+	const bool hov = (MouseX >= (int)tx && MouseX <= (int)(tx + tw) && MouseY >= (int)ty && MouseY <= (int)(ty + th));
+
+	HFONT oldFont = (HFONT)SelectObject(m_hFontDC, g_hFontBold);
+	const DWORD oldTC = SetTextColor;
+	const DWORD oldBG = SetBackgroundTextColor;
+
+	if (s_TexHudToggleCS != 0)
+	{
+		float rx = tx * g_fScreenRate_x;
+		float ry = (float)WindowHeight - ty * g_fScreenRate_y;
+		float rw = tw * g_fScreenRate_x;
+		float rh = th * g_fScreenRate_y;
+		float u0 = collapsed ? 0.00f : 0.50f;
+		float u1 = collapsed ? 0.50f : 1.00f;
+		float c = hov ? 1.0f : 0.90f;
+
+		EnableAlphaTest(true);
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, s_TexHudToggleCS);
+		glColor4f(c, c, c, 0.98f);
+		glBegin(GL_QUADS);
+		glTexCoord2f(u0, 0.0f); glVertex2f(rx,      ry);
+		glTexCoord2f(u1, 0.0f); glVertex2f(rx + rw, ry);
+		glTexCoord2f(u1, 1.0f); glVertex2f(rx + rw, ry - rh);
+		glTexCoord2f(u0, 1.0f); glVertex2f(rx,      ry - rh);
+		glEnd();
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+	}
+	else
+	{
+		ChatPanelRect(tx, ty, tw, th, 0.25f, 0.34f, 0.42f, 0.92f);
+		ChatPanelRect(tx + 1.0f, ty + 1.0f, tw - 2.0f, th - 2.0f, 0.06f, 0.085f, 0.115f, 0.94f);
+		const char* glyph = collapsed ? ">>" : "<<";
+		glEnable(GL_TEXTURE_2D);
+		EnableAlphaTest(true);
+		SetBackgroundTextColor = 0;
+		SetTextColor = 0xFFE6D888;
+		RenderText((int)(tx + 3.0f), (int)(ty + 6.0f), (char*)glyph, 0, RT3_SORT_LEFT, NULL);
+	}
+
+	if (hov)
+	{
+		SelectObject(m_hFontDC, g_hFont);
+		const char* tip = collapsed ? "Expand Shortcuts" : "Collapse Shortcuts";
+		SIZE tsz = { 0, 0 };
+		GetTextExtentPoint32A(m_hFontDC, tip, (int)strlen(tip), &tsz);
+		float tipW = (g_fScreenRate_x > 0.0f) ? ((float)tsz.cx / g_fScreenRate_x) : 80.0f;
+		float tipY = ty + th + 4.0f;
+		ChatPanelRect(tx, tipY, tipW + 10.0f, 15.0f, 0.23f, 0.27f, 0.32f, 0.95f);
+		ChatPanelRect(tx + 1.0f, tipY + 1.0f, tipW + 8.0f, 13.0f, 0.055f, 0.075f, 0.098f, 0.92f);
+		glEnable(GL_TEXTURE_2D);
+		EnableAlphaTest(true);
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+		SetBackgroundTextColor = 0;
+		SetTextColor = 0xFFF8F2E6;
+		RenderText((int)(tx + 5.0f), (int)(tipY + 2.5f), (char*)tip, 0, RT3_SORT_LEFT, NULL);
+	}
+
+	SelectObject(m_hFontDC, oldFont ? oldFont : g_hFont);
+	SetTextColor = oldTC;
+	SetBackgroundTextColor = oldBG;
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+	DisableAlphaBlend();
 }

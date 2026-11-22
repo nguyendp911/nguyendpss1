@@ -1,6 +1,9 @@
 #pragma once
 
 #include "ProtocolDefines.h"
+#include <set>
+#include <string>
+#include <vector>
 
 //**********************************************//
 //************ GameServer -> Client ************//
@@ -26,87 +29,44 @@ struct MOVE_LIST_INFO
 	DWORD Money;
 };
 
-//**********************************************//
-//**********************************************//
-//**********************************************//
+enum MOVELIST_TAB
+{
+	MOVELIST_TAB_ALL = 0,
+	MOVELIST_TAB_FAVORITES = 1,
+	MOVELIST_TAB_NORMAL = 2,
+	MOVELIST_TAB_HIGH = 3,
+};
 
 class CMoveList
 {
-	enum
-	{
-		MOVELIST_WINDOW_POSX = 1,
-		MOVELIST_WINDOW_POSY = 1,
-
-		MOVELIST_SECTION_WIDTH = 50,
-		MOVELIST_BASE_HEIGHT = 60,
-
-		// Scroll settings
-		SCROLL_WIDTH = 4, // Width of the scroll bar
-		SCROLL_BAR_SIZE = 2,
-
-		NUMBER_OF_SHOWING_MAPS = 20,
-	};
-
 public:
-
 	CMoveList();
-
 	virtual ~CMoveList();
 
 	bool GetMoveListState();
-
 	void Toggle();
-
 	void Render();
-
 	void UpdateMouse();
-
 	void GCMoveListRecv(PMSG_MOVE_LIST_RECV* lpMsg);
 
 private:
-
-	void RenderFrame();
-
-	void RenderScrollbar();
-
-	void RenderMapsList();
-
-	bool CheckScrolling();
-
-	bool CheckClickOnMap();
-
-	bool CheckClickOnClose();
+	void LoadFavorites();
+	void SaveFavorites();
+	bool IsFavorite(const char* mapName) const;
+	void ToggleFavorite(const char* mapName);
+	void BuildFilteredList(std::vector<int>& outIndices) const;
 
 	bool CheckMove(const MOVE_LIST_INFO& Move);
-
 	bool CheckSpecialRequirements(const MOVE_LIST_INFO& Move);
 
-	void SetNumberOfShowingLines(int nShowingLines);
-
-	void Scrolling(int nRenderEndLine);
-
-	void UpdateWndSize();
-
-	void UpdateScrollSize();
-	void UpdateScrollPos();
-
 private:
-
 	bool MoveListSwitch;
-
-	POINT m_Pos;
-
-	SIZEF m_Size;
-
-	float m_SectionWidth;
-
-	int m_nShowingLines;
-	int m_iCurrentRenderEndLine;
-
-	float m_ScrollBarPos[2];
-	float m_ScrollBarSize[2];
+	int m_CurrentTab;
+	int m_ScrollOffset;
+	bool m_FavoritesLoaded;
 
 	std::vector<MOVE_LIST_INFO> m_MoveList;
+	std::set<std::string> m_Favorites;
 
 	BYTE PKLimitFree;
 };

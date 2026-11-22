@@ -464,6 +464,21 @@ static void MiniMapCenterText(float cx, int y, const char* text, DWORD color, HF
 	SelectObject(m_hFontDC, oldFont);
 }
 
+float CMiniMap::GetBottomY()
+{
+	if (!this->MiniMapTable[World])
+	{
+		return 8.0f;
+	}
+
+	if (!this->MiniMapSwitch)
+	{
+		return CS_MM_Y + CS_MM_COLL_H + 5.0f;
+	}
+
+	return CS_MM_BTN_Y + CS_MM_BTN_H + 5.0f;
+}
+
 void CMiniMap::UpdateMouse()
 {
 	if (!this->MiniMapTable[World])
@@ -523,7 +538,7 @@ void CMiniMap::Render()
 		int hx = Hero ? (int)(*(float*)(Hero + 0x10) / 100.0f) : 0;
 		int hy = Hero ? (int)(*(float*)(Hero + 0x14) / 100.0f) : 0;
 		char label[64];
-		sprintf_s(label, sizeof(label), "%s  %d,%d", gMapManager.GetMapName(World), hx, hy);
+		sprintf_s(label, sizeof(label), "%s | %d, %d", gMapManager.GetMapName(World), hx, hy);
 		MiniMapCenterText(CS_MM_X + CS_MM_W * 0.5f, (int)(CS_MM_Y + 10.0f), label, 0xFFE6EEF2, g_hFontBold);
 		return;
 	}
@@ -791,13 +806,11 @@ void CMiniMap::RenderMiniMapFrame()
 	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 	DisableAlphaBlend();
 
-	// Map Name + Hero Coordinates centered inside the coordinate plate
+	// Map Name | Hero Coordinates centered on one line inside the coordinate plate
 	const float plateCX = CS_MM_X + CS_MM_W * 0.5f;
-	MiniMapCenterText(plateCX, (int)(CS_MM_PLATE_Y + 7.0f), gMapManager.GetMapName(World), 0xFFF0F4F8, g_hFontBold);
-
-	char coords[32];
-	sprintf_s(coords, sizeof(coords), "%d, %d", (int)this->CharPosX, (int)this->CharPosY);
-	MiniMapCenterText(plateCX, (int)(CS_MM_PLATE_Y + 18.0f), coords, 0xFFC4B66F, g_hFont);
+	char label[64];
+	sprintf_s(label, sizeof(label), "%s | %d, %d", gMapManager.GetMapName(World), (int)this->CharPosX, (int)this->CharPosY);
+	MiniMapCenterText(plateCX, (int)(CS_MM_PLATE_Y + 14.0f), label, 0xFFF0F4F8, g_hFontBold);
 }
 
 void CMiniMap::RenderMiniMapButtons()

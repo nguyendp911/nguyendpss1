@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "CommandManager.h"
 #include "CustomCombo.h"
+#include "Market.h"
 #include "BonusManager.h"
 #include "DSProtocol.h"
 #include "GameMain.h"
@@ -239,6 +240,22 @@ bool CCommandManager::ManagementCore(LPOBJ lpObj, char* message)
 	if (_stricmp(command, "/combo") == 0)
 	{
 		gCustomCombo.CommandCombo(lpObj);
+		return true;
+	}
+
+	if (_stricmp(command, "/buyvip") == 0)
+	{
+		char* arg = &message[strlen(command)];
+		while (*arg == ' ') arg++;
+		gMarket.CommandBuyVip(lpObj, arg);
+		return true;
+	}
+
+	if (_stricmp(command, "/top") == 0 || _stricmp(command, "/ranking") == 0)
+	{
+		char* arg = &message[strlen(command)];
+		while (*arg == ' ') arg++;
+		gMarket.CommandTop(lpObj, arg);
 		return true;
 	}
 

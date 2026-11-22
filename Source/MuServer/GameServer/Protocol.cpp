@@ -33,6 +33,10 @@
 #include "Util.h"
 #include "Viewport.h"
 #include "Warehouse.h"
+#include "JewelBank.h"
+#include "CashShop.h"
+#include "PartyMatching.h"
+#include "Market.h"
 
 void ProtocolCore(BYTE head, BYTE* lpMsg, int size, int aIndex, int encrypt, int serial)
 {
@@ -418,6 +422,149 @@ void ProtocolCore(BYTE head, BYTE* lpMsg, int size, int aIndex, int encrypt, int
 				{
 					gGoldenArcher.CGGoldenArcherRegisterLuckyRecv((PMSG_GOLDEN_ARCHER_REGISTER_LUCKY_RECV*)lpMsg, aIndex);
 
+					break;
+				}
+			}
+
+			break;
+		}
+
+		case 0x98:
+		{
+			switch (((lpMsg[0] == 0xC1) ? lpMsg[3] : lpMsg[4]))
+			{
+				case 0x01:
+				{
+					gMarket.CGMarketPageRecv((CG_MARKET_PAGE_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0x02:
+				{
+					gMarket.CGMarketBuyRecv((CG_MARKET_BUY_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0x03:
+				{
+					gMarket.CGMarketSellRecv((CG_MARKET_SELL_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0x04:
+				{
+					gMarket.CGMarketMyItemsRecv((CG_MARKET_MY_ITEMS_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0x05:
+				{
+					gMarket.CGMarketCancelSellRecv((CG_MARKET_CANCEL_SELL_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0x06:
+				{
+					gMarket.CGMarketClaimPaymentRecv((CG_MARKET_CLAIM_PAYMENT_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0x08:
+				{
+					gMarket.CGRankingReqRecv((CG_RANKING_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0x09:
+				{
+					gMarket.CGBuyVipReqRecv((CG_BUY_VIP_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0x10:
+				{
+					gCashShop.CGCashShopBuyRecv((PMSG_CASHSHOP_BUY_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0x11:
+				{
+					gCashShop.CGCashShopInfoRecv((PMSG_CASHSHOP_INFO_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0x20:
+				{
+					gJewelBank.CGInfoRecv((CG_JEWELBANK_INFO_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0x21:
+				{
+					gJewelBank.CGDepositRecv((CG_JEWELBANK_DEPOSIT_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+
+				case 0x22:
+				{
+					gJewelBank.CGWithdrawRecv((CG_JEWELBANK_WITHDRAW_REQ*)lpMsg, aIndex);
+
+					break;
+				}
+			}
+
+			break;
+		}
+
+		case 0x99:
+		{
+			switch (((lpMsg[0] == 0xC1) ? lpMsg[3] : lpMsg[4]))
+			{
+				case 0x01:
+				{
+					gPartyMatching.CGListRecv((CG_PARTY_MATCHING_LIST_REQ*)lpMsg, aIndex);
+					break;
+				}
+				case 0x02:
+				{
+					gPartyMatching.CGRegisterRecv((CG_PARTY_MATCHING_REGISTER_REQ*)lpMsg, aIndex);
+					break;
+				}
+				case 0x03:
+				{
+					gPartyMatching.CGCancelRecv((CG_PARTY_MATCHING_CANCEL_REQ*)lpMsg, aIndex);
+					break;
+				}
+				case 0x04:
+				{
+					gPartyMatching.CGJoinRecv((CG_PARTY_MATCHING_JOIN_REQ*)lpMsg, aIndex);
+					break;
+				}
+				case 0x06:
+				{
+					gPartyMatching.CGAcceptRecv((CG_PARTY_MATCHING_ACCEPT_REQ*)lpMsg, aIndex);
+					break;
+				}
+				case 0x07:
+				{
+					gPartyMatching.CGMoveToLeaderRecv((CG_PARTY_MATCHING_MOVE_LEADER_REQ*)lpMsg, aIndex);
+					break;
+				}
+				case 0x08:
+				{
+					gPartyMatching.CGSetLeaderRecv((CG_PARTY_MATCHING_SET_LEADER_REQ*)lpMsg, aIndex);
 					break;
 				}
 			}

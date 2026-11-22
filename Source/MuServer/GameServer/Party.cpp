@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Party.h"
+#include "PartyMatching.h"
 #include "EffectManager.h"
 #include "Map.h"
 #include "Message.h"
@@ -255,6 +256,27 @@ void CParty::ChangeLeader(int index, int number)
 			break;
 		}
 	}
+}
+
+bool CParty::SetLeader(int index, int targetIndex)
+{
+	if (this->IsParty(index) == 0 || OBJECT_RANGE(targetIndex) == 0)
+	{
+		return 0;
+	}
+
+	int slot = this->GetMemberNumber(index, targetIndex);
+	if (slot <= 0 || slot >= MAX_PARTY_USER)
+	{
+		return 0;
+	}
+
+	int oldLeader = this->m_PartyInfo[index].Index[0];
+	this->m_PartyInfo[index].Index[0] = targetIndex;
+	this->m_PartyInfo[index].Index[slot] = oldLeader;
+
+	this->GCPartyListSend(index);
+	return 1;
 }
 
 bool CParty::AutoAcceptPartyRequest(LPOBJ lpObj, LPOBJ lpTarget)
@@ -644,6 +666,8 @@ void CParty::GCPartyListSend(int index)
 			DataSend(this->m_PartyInfo[index].Index[n], send, size);
 		}
 	}
+
+	gPartyMatching.SendPartyExtInfo(index);
 }
 
 void CParty::GCPartyDelMemberSend(int aIndex)
@@ -703,4 +727,6 @@ void CParty::GCPartyLifeSend(int index)
 			DataSend(this->m_PartyInfo[index].Index[n], send, size);
 		}
 	}
+
+	gPartyMatching.SendPartyExtInfo(index);
 }
