@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "CommandManager.h"
 #include "Duel.h"
+#include "ChaosCastle.h"
+#include "Battlefield.h"
 #include "CustomCombo.h"
 #include "Market.h"
 #include "BonusManager.h"
@@ -261,6 +263,34 @@ bool CCommandManager::ManagementCore(LPOBJ lpObj, char* message)
 	if (_stricmp(command, "/cancelduel") == 0 || _stricmp(command, "/refuseduel") == 0)
 	{
 		gDuel.CommandDuelRefuse(lpObj);
+		return true;
+	}
+
+	if (_stricmp(command, "/cc") == 0 || _stricmp(command, "/chaoscastle") == 0)
+	{
+		CG_CHAOS_CASTLE_REQ req;
+		memset(&req, 0, sizeof(req));
+		gChaosCastle.CGChaosCastleInfoRecv(&req, lpObj->Index);
+		return true;
+	}
+
+	if (_stricmp(command, "/startcc") == 0 || _stricmp(command, "/ccstart") == 0)
+	{
+		gChaosCastle.StartCC();
+		return true;
+	}
+
+	if (_stricmp(command, "/bf") == 0 || _stricmp(command, "/battlefield") == 0)
+	{
+		CG_BF_REQ req;
+		memset(&req, 0, sizeof(req));
+		gBattlefield.CGBattlefieldInfoRecv(&req, lpObj->Index);
+		return true;
+	}
+
+	if (_stricmp(command, "/startbf") == 0 || _stricmp(command, "/bfstart") == 0)
+	{
+		gBattlefield.StartNow();
 		return true;
 	}
 

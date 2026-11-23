@@ -62,6 +62,15 @@ MAP_FOG_INFO* CMapFog::GetInfoByIndex(int MapNumber)
 
 bool CMapFog::GetFogRGB(int MapNumber, float* DayFogRGB, float* NightFogRGB)
 {
+        // Deep dark abyssal void for Chaos Castle 1..6 (Maps 18..23)
+        if (MapNumber >= 18 && MapNumber <= 23)
+        {
+                DayFogRGB[0] = NightFogRGB[0] = 0.04f;
+                DayFogRGB[1] = NightFogRGB[1] = 0.04f;
+                DayFogRGB[2] = NightFogRGB[2] = 0.07f;
+                return true;
+        }
+
         MAP_FOG_INFO* lpInfo = this->GetInfoByIndex(MapNumber);
 
         if (lpInfo == NULL)

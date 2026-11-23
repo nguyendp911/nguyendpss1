@@ -22,6 +22,8 @@
 
 #define DS_MAP_RANGE(x) (((x) == MAP_DEVIL_SQUARE1) ? 1 : 0)
 #define BC_MAP_RANGE(x) (((x) < MAP_BLOOD_CASTLE1) ? 0 : ((x) > MAP_BLOOD_CASTLE6) ? 0 : 1)
+#define CC_MAP_RANGE(x) (((x) < MAP_CHAOS_CASTLE1) ? 0 : ((x) > MAP_CHAOS_CASTLE6) ? 0 : 1)
+#define BF_MAP_RANGE(x) ((x) == MAP_BATTLEFIELD ? 1 : 0)
 
 enum eMapNumber
 {
@@ -42,6 +44,13 @@ enum eMapNumber
 	MAP_BLOOD_CASTLE4 = 14,
 	MAP_BLOOD_CASTLE5 = 15,
 	MAP_BLOOD_CASTLE6 = 16,
+	MAP_CHAOS_CASTLE1 = 18,
+	MAP_CHAOS_CASTLE2 = 19,
+	MAP_CHAOS_CASTLE3 = 20,
+	MAP_CHAOS_CASTLE4 = 21,
+	MAP_CHAOS_CASTLE5 = 22,
+	MAP_CHAOS_CASTLE6 = 23,
+	MAP_BATTLEFIELD = 24,
 };
 
 class CMap

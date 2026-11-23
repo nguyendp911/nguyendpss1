@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "NpcTalk.h"
+#include "ChaosCastle.h"
+#include "Battlefield.h"
 #include "BloodCastle.h"
 #include "ChaosBox.h"
 #include "CustomNpcMove.h"
@@ -79,6 +81,13 @@ bool CNpcTalk::NpcTalk(LPOBJ lpNpc, LPOBJ lpObj)
 			break;
 		}
 
+		case CHAOS_CASTLE_NPC:
+		{
+			gChaosCastle.NpcChaosCastle(lpNpc, lpObj);
+
+			break;
+		}
+
 		case 237:
 		{
 			this->NpcCharon(lpNpc, lpObj);
@@ -107,10 +116,16 @@ bool CNpcTalk::NpcTalk(LPOBJ lpNpc, LPOBJ lpObj)
 			break;
 		}
 
-		case 247:
 		case 249:
 		{
-			this->NpcGuard(lpNpc, lpObj);
+			if (lpNpc->Map == 0 && lpNpc->X >= 138 && lpNpc->X <= 142 && lpNpc->Y >= 125 && lpNpc->Y <= 129)
+			{
+				gBattlefield.NpcBattlefield(lpNpc, lpObj);
+			}
+			else
+			{
+				this->NpcGuard(lpNpc, lpObj);
+			}
 
 			break;
 		}

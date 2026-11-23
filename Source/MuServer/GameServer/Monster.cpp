@@ -357,7 +357,16 @@ bool gObjBallRegen(LPOBJ lpObj)
 	}
 	else
 	{
-		if (gMonsterSetBase.GetPosition(lpObj->PosNum, lpObj->Map, &lpObj->X, &lpObj->Y) == 0)
+		if ((lpObj->StartX != 0 || lpObj->StartY != 0) &&
+			gMap[lpObj->Map].CheckAttr(lpObj->StartX, lpObj->StartY, 1) == 0 &&
+			gMap[lpObj->Map].CheckAttr(lpObj->StartX, lpObj->StartY, 4) == 0 &&
+			gMap[lpObj->Map].CheckAttr(lpObj->StartX, lpObj->StartY, 8) == 0)
+		{
+			lpObj->X = lpObj->StartX;
+
+			lpObj->Y = lpObj->StartY;
+		}
+		else if (gMonsterSetBase.GetPosition(lpObj->PosNum, lpObj->Map, &lpObj->X, &lpObj->Y) == 0)
 		{
 			lpObj->Live = 0;
 
@@ -445,7 +454,16 @@ bool gObjMonsterRegen(LPOBJ lpObj)
 	}
 	else
 	{
-		if (gMonsterSetBase.GetPosition(lpObj->PosNum, lpObj->Map, &lpObj->X, &lpObj->Y) == 0)
+		if ((lpObj->StartX != 0 || lpObj->StartY != 0) &&
+			gMap[lpObj->Map].CheckAttr(lpObj->StartX, lpObj->StartY, 1) == 0 &&
+			gMap[lpObj->Map].CheckAttr(lpObj->StartX, lpObj->StartY, 4) == 0 &&
+			gMap[lpObj->Map].CheckAttr(lpObj->StartX, lpObj->StartY, 8) == 0)
+		{
+			lpObj->X = lpObj->StartX;
+
+			lpObj->Y = lpObj->StartY;
+		}
+		else if (gMonsterSetBase.GetPosition(lpObj->PosNum, lpObj->Map, &lpObj->X, &lpObj->Y) == 0)
 		{
 			lpObj->Live = 0;
 
@@ -898,7 +916,7 @@ void gObjMonsterMagicAttack(LPOBJ lpObj, int skill)
 		return;
 	}
 
-	gSkillManager.GCDurationSkillAttackSend(lpObj, lpSkill->m_index, (BYTE)lpObj->X, (BYTE)lpObj->Y, 0);
+	gSkillManager.GCDurationSkillAttackSend(lpObj, lpSkill->m_index, (BYTE)lpObj->X, (BYTE)lpObj->Y, lpObj->Dir);
 
 	BYTE send[256];
 
@@ -950,7 +968,7 @@ void gObjMonsterMagicAttack(LPOBJ lpObj, int skill)
 
 	memcpy(send, &pMsg, sizeof(pMsg));
 
-	gSkillManager.CGMultiSkillAttackRecv((PMSG_MULTI_SKILL_ATTACK_RECV*)send, lpObj->Index, 1);
+	gSkillManager.CGMultiSkillAttackRecv((PMSG_MULTI_SKILL_ATTACK_RECV*)send, lpObj->Index, 0);
 }
 
 void gObjMonsterBeattackRecv(BYTE* aRecv, int aIndex)
@@ -1581,7 +1599,7 @@ void gObjMonsterProcess(LPOBJ lpObj)
 
 		if (AttackType >= 100)
 		{
-			if ((GetLargeRand() % 5) == 0)
+			if ((GetLargeRand() % 3) == 0)
 			{
 				AttackType -= 100;
 

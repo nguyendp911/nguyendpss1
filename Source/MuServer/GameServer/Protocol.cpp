@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Protocol.h"
 #include "Duel.h"
+#include "ChaosCastle.h"
+#include "Battlefield.h"
 #include "CustomCombo.h"
 #include "Attack.h"
 #include "Blacklist.h"
@@ -571,6 +573,26 @@ void ProtocolCore(BYTE head, BYTE* lpMsg, int size, int aIndex, int encrypt, int
 				case 0x10:
 				{
 					CGRegisterAccountRecv((CG_REGISTER_ACCOUNT_REQ*)lpMsg, aIndex);
+					break;
+				}
+				case 0x20:
+				{
+					gChaosCastle.CGChaosCastleInfoRecv((CG_CHAOS_CASTLE_REQ*)lpMsg, aIndex);
+					break;
+				}
+				case 0x21:
+				{
+					gChaosCastle.CGChaosCastleEnterRecv((CG_CHAOS_CASTLE_REQ*)lpMsg, aIndex);
+					break;
+				}
+				case 0x40:
+				{
+					gBattlefield.CGBattlefieldInfoRecv((CG_BF_REQ*)lpMsg, aIndex);
+					break;
+				}
+				case 0x41:
+				{
+					gBattlefield.CGBattlefieldEnterRecv((CG_BF_REQ*)lpMsg, aIndex);
 					break;
 				}
 			}

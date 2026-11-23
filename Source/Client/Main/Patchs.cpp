@@ -2332,7 +2332,10 @@ bool CPatchs::AttackStage(DWORD c, DWORD o)
 		case SKILL_INFERNO:
 		case SKILL_ENERGY_BALL:
 		{
-			*(BYTE*)(c + 0x2F5) = 15; // c->AttackTime = 15;
+			if (*(short*)(o + 2) == 390 || *(float*)(o + 264) >= 5.0f)
+			{
+				*(BYTE*)(c + 0x2F5) = 15; // c->AttackTime = 15;
+			}
 
 			break;
 		}
@@ -2343,8 +2346,8 @@ bool CPatchs::AttackStage(DWORD c, DWORD o)
 			// if (o->AnimationFrame >= 5.0f && ((o->Type == MODEL_PLAYER && o->CurrentAction >= PLAYER_ATTACK_FIST && o->CurrentAction <= PLAYER_RIDE_SKILL)
 			// if ((o->Type >= MODEL_MONSTER01 && o->Type < MODEL_MONSTER_END) && o->CurrentAction >= MONSTER01_ATTACK1 && o->CurrentAction <= MONSTER01_ATTACK2)
 			if ((*(float*)(o + 264) >= 1.0f && *(short*)(o + 2) == 390 && *(BYTE*)(o + 261) == 62)
-			    || (*(float*)(o + 264) >= 5.0 && *(short*)(o + 2) == 390 && *(BYTE*)(o + 261) >= 34 && *(BYTE*)(o + 261) <= 91)
-			    || (*(short*)(o + 2) >= 270 && *(short*)(o + 2) < 335 && *(BYTE*)(o + 261) >= 3u && *(BYTE*)(o + 261) <= 4u))
+			    || (*(float*)(o + 264) >= 5.0f && *(short*)(o + 2) == 390 && *(BYTE*)(o + 261) >= 34 && *(BYTE*)(o + 261) <= 91)
+			    || (*(float*)(o + 264) >= 5.0f && *(short*)(o + 2) >= 270 && *(short*)(o + 2) < 335 && *(BYTE*)(o + 261) >= 3u && *(BYTE*)(o + 261) <= 4u))
 			{
 				*(BYTE*)(c + 0x2F5) = 15; // c->AttackTime = 15;
 			}

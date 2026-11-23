@@ -49,6 +49,8 @@
 "PartyMatching.cpp"
 "DuelManager.cpp"
 "RegisterUI.cpp"
+"ChaosCastleUI.cpp
+BattlefieldUI.cpp"
 "Patchs.cpp"
 "PingSystem.cpp"
 "PrintPlayer.cpp"

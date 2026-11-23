@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Util.h"
 #include "DuelManager.h"
+#include "ChaosCastleUI.h"
+#include "BattlefieldUI.h"
 
 void SetByte(DWORD offset, BYTE value)
 {
@@ -174,7 +176,7 @@ SHORT WINAPI GetAsyncKeyStateCall(int key)
 		return 0;
 	}
 
-	if (key == VK_CONTROL && gDuelManager.IsInDuel() && !CheckInputInterfaces())
+	if (key == VK_CONTROL && (gDuelManager.IsInDuel() || gChaosCastleUI.IsInBattle() || gBattlefieldUI.IsInBattle()) && !CheckInputInterfaces())
 	{
 		return (SHORT)0x8000;
 	}

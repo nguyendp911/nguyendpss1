@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CustomCombo.h"
+#include "Map.h"
 #include "Notice.h"
 #include "Quest.h"
 #include "SkillManager.h"
@@ -320,9 +321,10 @@ bool CCustomCombo::CheckCombo(LPOBJ lpObj, LPOBJ lpTarget, CSkill* lpSkill, int 
 	// 3. Attacker has toggled PK Mode ON on client (lpData->pkMode != 0)
 	bool isTargetPlayer = (lpTarget->Type == OBJECT_USER);
 	bool isDuel = (lpObj->DuelUser != -1 && lpObj->DuelUser == lpTarget->Index && lpTarget->DuelUser == lpObj->Index);
+	bool isCastle = (CC_MAP_RANGE(lpObj->Map) != 0);
 	bool isPKModeOn = (lpData->pkMode != 0);
 
-	bool isPvP = isTargetPlayer || isDuel || isPKModeOn;
+	bool isPvP = isTargetPlayer || isDuel || isCastle || isPKModeOn;
 
 	if (isDuel || (isPvP && this->m_PvPRequire3Skills))
 	{

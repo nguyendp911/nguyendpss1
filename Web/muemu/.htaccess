@@ -1,0 +1,9 @@
+# Chan truy cap truc tiep vao file cau hinh, hang doi va file log
+<FilesMatch "^(config\.php|queue\.json|sepay\.log|README\.txt)$">
+    Require all denied
+</FilesMatch>
+
+# Giu lai header Authorization cho PHP (Apache/cPanel)
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} ^(.*)
+RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]

@@ -11,6 +11,8 @@
 #include "CashShopUI.h"
 #include "PartyMatching.h"
 #include "DuelManager.h"
+#include "ChaosCastleUI.h"
+#include "BattlefieldUI.h"
 #include "SmartAutoHelperUI.h"
 #include "EventTimer.h"
 #include "ItemManager.h"
@@ -322,6 +324,22 @@ LRESULT Controller::Keyboard(int nCode, WPARAM wParam, LPARAM lParam)
 
 			if (wParam == VK_ESCAPE && SceneFlag == 5 && Hero)
 			{
+				if (gChaosCastleUI.IsOpen())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gChaosCastleUI.Close();
+					}
+					return 1;
+				}
+				if (gBattlefieldUI.IsOpen())
+				{
+					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)
+					{
+						gBattlefieldUI.Close();
+					}
+					return 1;
+				}
 				if (gDuelManager.IsOpen())
 				{
 					if (((DWORD)lParam & (1 << 31)) == 0 && ((DWORD)lParam & (1 << 30)) == 0)

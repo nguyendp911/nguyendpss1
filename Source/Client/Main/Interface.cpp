@@ -12,6 +12,8 @@
 #include "CashShopUI.h"
 #include "PartyMatching.h"
 #include "DuelManager.h"
+#include "ChaosCastleUI.h"
+#include "BattlefieldUI.h"
 #include "SmartAutoHelperUI.h"
 #include "LoginScale.h"
 #include "Camera3D.h"
@@ -1349,6 +1351,10 @@ void Interface::MyUpdateWindowsMouse()
 
 	gDuelManager.UpdateMouse();
 
+	gChaosCastleUI.UpdateMouse();
+
+	gBattlefieldUI.UpdateMouse();
+
 	gSmartAutoHelperUI.UpdateKeyboard();
 
 	gAutoHelper.Work();
@@ -1395,6 +1401,10 @@ void Interface::MyRenderWindows()
 	gPartyMatchingUI.Render();
 
 	gDuelManager.Render();
+
+	gChaosCastleUI.Render();
+
+	gBattlefieldUI.Render();
 
 	gScreenRecorder.CaptureFrame();
 

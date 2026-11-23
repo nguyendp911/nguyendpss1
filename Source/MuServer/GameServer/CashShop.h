@@ -44,6 +44,19 @@ struct PMSG_CASHSHOP_BUY_ANS
 	DWORD wcoin;
 };
 
+struct PMSG_SEPAY_INFO
+{
+	PSBMSG_HEAD header; // C1:99:30
+	BYTE enable;
+	DWORD rateVnd;
+	DWORD rateWcoin;
+	DWORD minAmount;
+	char bankCode[16];
+	char bankAccount[32];
+	char bankOwner[48];
+	char account[16];
+};
+
 struct CASHSHOP_PRODUCT
 {
 	BYTE type;
@@ -74,11 +87,20 @@ public:
 
 private:
 	void SendList(int aIndex, DWORD wcoin);
+	void SendSePayInfo(int aIndex);
 	void ApplyClassChange(LPOBJ lpObj, int targetClass);
 
 	bool m_Enable;
 	int m_Count;
 	CASHSHOP_PRODUCT m_Products[CASHSHOP_MAX_PRODUCT];
+
+	bool m_SePayEnable;
+	DWORD m_SePayRateVnd;
+	DWORD m_SePayRateWcoin;
+	DWORD m_SePayMinAmount;
+	char m_SePayBankCode[16];
+	char m_SePayBankAccount[32];
+	char m_SePayBankOwner[48];
 };
 
 extern CCashShop gCashShop;

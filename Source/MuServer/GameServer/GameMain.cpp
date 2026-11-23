@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "GameMain.h"
 #include "Duel.h"
+#include "ChaosCastle.h"
+#include "Battlefield.h"
 #include "BattleSoccerManager.h"
 #include "DSProtocol.h"
 #include "HackCheck.h"
@@ -147,6 +149,10 @@ void CALLBACK QueueTimerCallback(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
 			gObjEventRunProc();
 
 			gDuel.MainProc();
+
+			gChaosCastle.MainProc();
+
+			gBattlefield.MainProc();
 
 			break;
 		}

@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "ObjectManager.h"
 #include "Duel.h"
+#include "ChaosCastle.h"
+#include "Battlefield.h"
 #include "PartyMatching.h"
 #include "Attack.h"
 #include "BattleSoccerManager.h"
@@ -222,6 +224,13 @@ void CObjectManager::ObjectSetStateProc()
 				continue;
 			}
 
+			if (BF_MAP_RANGE(lpObj->Map) != 0 || CC_MAP_RANGE(lpObj->Map) != 0)
+			{
+				gObjDel(lpObj->Index);
+
+				continue;
+			}
+
 			if (lpObj->Attribute == 60 || lpObj->Attribute == 61)
 			{
 				gObjDel(lpObj->Index);
@@ -293,7 +302,11 @@ void CObjectManager::ObjectSetStateProc()
 
 			gObjClearViewport(lpObj);
 
-			switch (lpObj->KillerType)
+			if (BF_MAP_RANGE(lpObj->Map) != 0)
+			{
+				gBattlefield.CheckRespawn(lpObj);
+			}
+			else switch (lpObj->KillerType)
 			{
 				case 0:
 				{
@@ -637,6 +650,10 @@ bool CObjectManager::CharacterGameClose(int aIndex)
 	gReconnect.SetReconnectInfo(lpObj);
 
 	gDuel.ResetDuel(lpObj);
+
+	gChaosCastle.OnUserDisconnect(lpObj);
+
+	gBattlefield.OnUserDisconnect(lpObj);
 
 	if (OBJECT_RANGE(lpObj->PartyNumber) != 0)
 	{
@@ -988,6 +1005,11 @@ void CObjectManager::CharacterCalcExperienceParty(LPOBJ lpObj, LPOBJ lpMonster, 
 
 bool CObjectManager::CharacterLevelUp(LPOBJ lpObj, DWORD AddExperience, int MaxLevelUp, int ExperienceType)
 {
+	if (MaxLevelUp <= 0)
+	{
+		MaxLevelUp = 1;
+	}
+
 	if (lpObj->Level >= gServerInfo.m_MaxCharacterLevel)
 	{
 		gNotice.GCNoticeSend(lpObj->Index, 1, gMessage.GetTextMessage(47, lpObj->Lang));
@@ -2860,6 +2882,16 @@ void CObjectManager::CharacterLifeCheck(LPOBJ lpObj, LPOBJ lpTarget, int damage,
 				gDevilSquare.MonsterDieProc(lpTarget, &gObj[SummonIndex]);
 			}
 
+			if (CC_MAP_RANGE(lpTarget->Map) != 0)
+			{
+				gChaosCastle.MonsterDieProc(lpTarget, &gObj[SummonIndex]);
+			}
+
+			if (BF_MAP_RANGE(lpTarget->Map) != 0)
+			{
+				gBattlefield.MonsterDieProc(lpTarget, &gObj[SummonIndex]);
+			}
+
 			if (gObj[SummonIndex].Type == OBJECT_USER)
 			{
 				gObjPKDownCheckTime(&gObj[SummonIndex], lpTarget->Level);
@@ -2873,6 +2905,16 @@ void CObjectManager::CharacterLifeCheck(LPOBJ lpObj, LPOBJ lpTarget, int damage,
 			if (gDuel.CheckDuel(&gObj[SummonIndex], lpTarget))
 			{
 				gDuel.CheckDuelScore(&gObj[SummonIndex], lpTarget);
+			}
+			else if (CC_MAP_RANGE(lpTarget->Map) != 0)
+			{
+				gChaosCastle.UserDieProc(lpTarget, &gObj[SummonIndex]);
+				lpTarget->KillerType = 0;
+			}
+			else if (BF_MAP_RANGE(lpTarget->Map) != 0)
+			{
+				gBattlefield.UserDieProc(lpTarget, &gObj[SummonIndex]);
+				lpTarget->KillerType = 0;
 			}
 			else
 			{
@@ -2906,6 +2948,14 @@ void CObjectManager::CharacterLifeCheck(LPOBJ lpObj, LPOBJ lpTarget, int damage,
 		lpTarget->State = OBJECT_DYING;
 
 		lpTarget->RegenTime = GetTickCount();
+
+		if (lpTarget->Type == OBJECT_MONSTER && lpTarget->PosNum >= 0 && lpTarget->Attribute != 62 &&
+			BC_MAP_RANGE(lpTarget->Map) == 0 && DS_MAP_RANGE(lpTarget->Map) == 0 &&
+			CC_MAP_RANGE(lpTarget->Map) == 0 && BF_MAP_RANGE(lpTarget->Map) == 0)
+		{
+			// Random monster respawn time: 15~30 seconds (ObjectSetStateCreate adds +1000ms)
+			lpTarget->MaxRegenTime = (14 + (GetLargeRand() % 16)) * 1000;
+		}
 
 		lpTarget->DieRegen = 1;
 

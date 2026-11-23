@@ -773,6 +773,23 @@ void CLoadModels::OpenItemsHook()
 			gLoadModels.MyAccessModel((gCustomItem.m_CustomItemInfo[n].ItemIndex + ITEM_BASE_MODEL), modelFolder, gCustomItem.m_CustomItemInfo[n].ModelName);
 		}
 	}
+
+	// Authentic Chaos Castle Guard full-body armor model (Main5.2 MODEL_ANGEL)
+	gLoadModels.MyAccessModel(MODEL_CC_GUARD, "Data\\Player\\", "Angel");
+
+	// Battlefield 3D Arcane Crystal Flag Tower (Blender FlagTower.bmd, 7 monster actions)
+	gLoadModels.MyAccessModel(MODEL_BF_TOWER, "Data\\Object25\\", "FlagTower");
+	{
+		DWORD b = gLoadModels.GetModels() + (188 * MODEL_BF_TOWER);
+		if (*(short*)(b + 0x26) >= 7 && *(DWORD*)(b + 0x30) != 0)
+		{
+			for (int i = 0; i < 7; i++)
+			{
+				*(float*)(*(DWORD*)(b + 0x30) + 4 + 16 * i) = 0.25f;
+			}
+			*(bool*)(*(DWORD*)(b + 0x30) + 96) = true; // MONSTER01_DIE.Loop = true
+		}
+	}
 }
 
 void CLoadModels::OpenItemTexturesHook()
@@ -1030,6 +1047,9 @@ void CLoadModels::OpenItemTexturesHook()
 			gLoadModels.MyOpenTexture((gCustomItem.m_CustomItemInfo[n].ItemIndex + ITEM_BASE_MODEL), textureFolder);
 		}
 	}
+
+	gLoadModels.MyOpenTexture(MODEL_CC_GUARD, "Npc\\");
+	gLoadModels.MyOpenTexture(MODEL_BF_TOWER, "Object25\\");
 }
 
 void CLoadModels::PartObjectColorHook(int Type, float Alpha, float Bright, float Light[3], bool ExtraMon)

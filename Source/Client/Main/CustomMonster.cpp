@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CustomMonster.h"
+#include "ChaosCastleUI.h"
 #include "LoadModels.h"
 
 CCustomMonster gCustomMonster;
@@ -162,6 +163,42 @@ void OpenNpcModel(CUSTOM_MONSTER_INFO* lpInfo)
 
 DWORD CCustomMonster::CreateCustomMonster(int Type, int PositionX, int PositionY, int Key)
 {
+	// In Battlefield (Map 24): replace Statue of Saint (Monster 132) with Blender 3D Arcane Crystal Flag Tower
+	if (World == 24 && Type == 132)
+	{
+		DWORD c = CreateCharacter(Key, MODEL_BF_TOWER, PositionX, PositionY, 0.0f);
+		if (c != 0)
+		{
+			*(float*)(c + 0x0C) = 1.05f;
+			*(BYTE*)(c + 0x84) = 2; // Monster
+			*(BYTE*)(c + 0x2EB) = 0; // Safe MonsterIndex
+			*(short*)(c + 0x08) = 0; // ExtState
+			*(short*)(c + 0x310) = HeroIndex;
+			memcpy((char*)(c + 0x1C1), "Flag Tower", 11);
+		}
+		return c;
+	}
+
+	// In Chaos Castle (Maps 18..23): spawn every monster as MODEL_PLAYER (390) wearing identical Chaos Castle armor!
+	// Matches Main5.2 ZzzCharacter.cpp: melee CC soldiers wield dual Sword of Destruction, ranged wield Bow or Staff.
+	if (World >= 18 && World <= 23 && Type != 247)
+	{
+		DWORD c = CreateCharacter(Key, 390, PositionX, PositionY, 0.0f);
+		if (c != 0)
+		{
+			*(float*)(c + 0x0C) = 0.92f;
+			*(BYTE*)(c + 0x84) = 2; // Monster
+			*(BYTE*)(c + 0x2EB) = 0; // Clear MonsterIndex so Tantalos/BeamKnight/etc. ribbon effects never spawn on MODEL_PLAYER
+			*(short*)(c + 0x310) = HeroIndex;
+			// Deterministic visual class: ~50% DK (dual Sword), ~25% DW (Staff), ~25% Elf (Bow)
+			int r = (Key & 3);
+			*(BYTE*)(c + 0x1BC) = (BYTE)((r == 0) ? 0 : (r == 1) ? 2 : 1);
+			*(char*)(c + 0x1C1) = 0;
+			ChaosCastleDress(c, false);
+		}
+		return c;
+	}
+
 	CUSTOM_MONSTER_INFO* lpInfo = gCustomMonster.GetInfoByIndex(Type);
 
 	if (lpInfo != NULL) // Is Custom Monster

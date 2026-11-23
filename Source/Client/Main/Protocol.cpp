@@ -20,6 +20,8 @@
 #include "CashShopUI.h"
 #include "PartyMatching.h"
 #include "RegisterUI.h"
+#include "ChaosCastleUI.h"
+#include "BattlefieldUI.h"
 #include "Language.h"
 #include "MoveList.h"
 #include "PacketManager.h"
@@ -440,6 +442,14 @@ bool CProtocol::TranslateProtocol(BYTE head, BYTE* lpMsg, int Size)
 				case 0x05: gPartyMatchingUI.OnNotifyLeaderRecv(lpMsg); return true;
 				case 0x09: gPartyMatchingUI.OnExtInfoRecv(lpMsg); return true;
 				case 0x10: gRegisterUI.OnRegisterAnsRecv(lpMsg); return true;
+				case 0x20: gChaosCastleUI.OnInfoRecv(lpMsg); return true;
+				case 0x22: gChaosCastleUI.OnStateRecv(lpMsg); return true;
+				case 0x23: gChaosCastleUI.OnResultRecv(lpMsg); return true;
+				case 0x30: gCashShopUI.OnSePayInfoRecv(lpMsg); return true;
+				case 0x40: gBattlefieldUI.OnInfoRecv(lpMsg); return true;
+				case 0x42: gBattlefieldUI.OnStateRecv(lpMsg); return true;
+				case 0x43: gBattlefieldUI.OnResultRecv(lpMsg); return true;
+				case 0x44: gBattlefieldUI.OnTeamsRecv(lpMsg); return true;
 			}
 
 			break;

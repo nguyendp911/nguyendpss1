@@ -2,6 +2,8 @@
 #include "ServerInfo.h"
 #include "Blacklist.h"
 #include "BloodCastle.h"
+#include "ChaosCastle.h"
+#include "Battlefield.h"
 #include "BonusManager.h"
 #include "CommandManager.h"
 #include "CustomNpcMove.h"
@@ -200,6 +202,14 @@ void CServerInfo::ReadEventInfo()
 	gEventSpawnMonster.Load(gPath.GetFullPath("Event\\EventSpawnMonster.dat"));
 
 	gBloodCastle.Load(gPath.GetFullPath("Event\\BloodCastle.dat"));
+
+	gChaosCastle.Load(gPath.GetFullPath("Event\\ChaosCastle.dat"));
+
+	gChaosCastle.Init();
+
+	gBattlefield.Load(gPath.GetFullPath("Event\\Battlefield.dat"));
+
+	gBattlefield.Init();
 
 	gBonusManager.Load(gPath.GetFullPath("Event\\BonusManager.dat"));
 

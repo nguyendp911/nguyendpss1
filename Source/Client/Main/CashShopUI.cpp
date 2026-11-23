@@ -6,9 +6,11 @@
 #include "Protocol.h"
 #include "Sound.h"
 #include "stb.h"
+#include <wininet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 
 CCashShopUI gCashShopUI;
 
@@ -207,10 +209,27 @@ CCashShopUI::CCashShopUI()
 	this->m_ConfirmProductIdx = -1;
 	this->m_SelectedClass = 0;
 	this->m_TexShopCS = 0;
+
+	this->m_HasSePayInfo = false;
+	memset(&this->m_SePayInfo, 0, sizeof(this->m_SePayInfo));
+	this->m_SePayOpen = false;
+	this->m_SePayAmount = 100000;
+	this->m_SePayPollTick = 0;
+	this->m_SePayPrevWCoin = 0;
+	this->m_TexQr = 0;
+	InitializeCriticalSection(&this->m_QrLock);
+	this->m_QrPixels = NULL;
+	this->m_QrW = 0;
+	this->m_QrH = 0;
+	this->m_QrReady = false;
+	this->m_QrLoading = false;
+	this->m_QrError = false;
+	this->m_QrSeq = 0;
 }
 
 CCashShopUI::~CCashShopUI()
 {
+	DeleteCriticalSection(&this->m_QrLock);
 }
 
 void CCashShopUI::LoadImages()
@@ -305,6 +324,17 @@ void CCashShopUI::OnListRecv(BYTE* lpMsg)
 {
 	PMSG_CASHSHOP_LIST_ANS* p = (PMSG_CASHSHOP_LIST_ANS*)lpMsg;
 	this->m_Enable = (p->enable != 0);
+	if (this->m_SePayOpen && p->wcoin > this->m_SePayPrevWCoin)
+	{
+		DWORD delta = p->wcoin - this->m_SePayPrevWCoin;
+		char dNum[24];
+		CSFormatComma(delta, dNum, sizeof(dNum));
+		this->m_StatusGood = true;
+		this->m_StatusTick = GetTickCount();
+		sprintf_s(this->m_StatusText, sizeof(this->m_StatusText), "Payment received! +%s WCoin added!", dNum);
+		this->m_SePayPrevWCoin = p->wcoin;
+		PlayBuffer(25, 0, 0);
+	}
 	this->m_WCoin = p->wcoin;
 	this->m_Count = (p->count > CASHSHOP_MAX_PRODUCT) ? CASHSHOP_MAX_PRODUCT : p->count;
 
@@ -313,6 +343,152 @@ void CCashShopUI::OnListRecv(BYTE* lpMsg)
 	{
 		this->m_Products[i] = list[i];
 	}
+}
+
+void CCashShopUI::OnSePayInfoRecv(BYTE* lpMsg)
+{
+	memcpy(&this->m_SePayInfo, lpMsg, sizeof(PMSG_SEPAY_INFO));
+	this->m_SePayInfo.bankCode[15] = 0;
+	this->m_SePayInfo.bankAccount[31] = 0;
+	this->m_SePayInfo.bankOwner[47] = 0;
+	this->m_SePayInfo.account[15] = 0;
+	this->m_HasSePayInfo = true;
+}
+
+struct QR_FETCH_JOB
+{
+	CCashShopUI* ui;
+	long seq;
+	char url[256];
+};
+
+DWORD WINAPI CCashShopUI::QrDownloadThread(LPVOID lpParam)
+{
+	QR_FETCH_JOB* job = (QR_FETCH_JOB*)lpParam;
+	CCashShopUI* ui = job->ui;
+	long seq = job->seq;
+	char url[256];
+	strcpy_s(url, sizeof(url), job->url);
+	delete job;
+
+	std::vector<unsigned char> png;
+	HINTERNET hInt = InternetOpenA("MuClientSePay/1.0", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+	if (hInt)
+	{
+		DWORD timeout = 10000;
+		InternetSetOptionA(hInt, INTERNET_OPTION_CONNECT_TIMEOUT, &timeout, sizeof(timeout));
+		InternetSetOptionA(hInt, INTERNET_OPTION_RECEIVE_TIMEOUT, &timeout, sizeof(timeout));
+		HINTERNET hUrl = InternetOpenUrlA(hInt, url, NULL, 0, INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE | INTERNET_FLAG_SECURE, 0);
+		if (hUrl)
+		{
+			unsigned char chunk[4096];
+			DWORD read = 0;
+			while (InternetReadFile(hUrl, chunk, sizeof(chunk), &read) && read > 0)
+			{
+				if (png.size() + read > 2 * 1024 * 1024) break;
+				png.insert(png.end(), chunk, chunk + read);
+			}
+			InternetCloseHandle(hUrl);
+		}
+		InternetCloseHandle(hInt);
+	}
+
+	int w = 0, h = 0, ch = 0;
+	unsigned char* pix = NULL;
+	if (!png.empty())
+	{
+		pix = stbi_load_from_memory(png.data(), (int)png.size(), &w, &h, &ch, 4);
+	}
+
+	EnterCriticalSection(&ui->m_QrLock);
+	if (ui->m_QrSeq == seq)
+	{
+		if (ui->m_QrPixels)
+		{
+			stbi_image_free(ui->m_QrPixels);
+			ui->m_QrPixels = NULL;
+		}
+		if (pix && w > 0 && h > 0)
+		{
+			ui->m_QrPixels = pix;
+			ui->m_QrW = w;
+			ui->m_QrH = h;
+			ui->m_QrReady = true;
+			ui->m_QrError = false;
+			pix = NULL;
+		}
+		else
+		{
+			ui->m_QrError = true;
+		}
+		ui->m_QrLoading = false;
+	}
+	LeaveCriticalSection(&ui->m_QrLock);
+
+	if (pix) stbi_image_free(pix);
+	return 0;
+}
+
+void CCashShopUI::StartQrDownload(DWORD amount)
+{
+	this->m_SePayAmount = amount;
+	if (!this->m_HasSePayInfo || this->m_SePayInfo.bankAccount[0] == 0 || this->m_SePayInfo.account[0] == 0)
+	{
+		this->m_QrError = true;
+		this->m_QrLoading = false;
+		return;
+	}
+
+	long seq = InterlockedIncrement(&this->m_QrSeq);
+	EnterCriticalSection(&this->m_QrLock);
+	this->m_QrLoading = true;
+	this->m_QrError = false;
+	this->m_QrReady = false;
+	LeaveCriticalSection(&this->m_QrLock);
+
+	QR_FETCH_JOB* job = new QR_FETCH_JOB();
+	job->ui = this;
+	job->seq = seq;
+	sprintf_s(job->url, sizeof(job->url),
+		"https://qr.sepay.vn/img?acc=%s&bank=%s&amount=%u&des=%s&template=compact",
+		this->m_SePayInfo.bankAccount, this->m_SePayInfo.bankCode, amount, this->m_SePayInfo.account);
+
+	HANDLE hTh = CreateThread(NULL, 0, &CCashShopUI::QrDownloadThread, job, 0, NULL);
+	if (hTh) CloseHandle(hTh);
+	else { delete job; this->m_QrLoading = false; this->m_QrError = true; }
+}
+
+void CCashShopUI::UploadPendingQr()
+{
+	unsigned char* pix = NULL;
+	int w = 0, h = 0;
+
+	EnterCriticalSection(&this->m_QrLock);
+	if (this->m_QrReady && this->m_QrPixels)
+	{
+		pix = this->m_QrPixels;
+		w = this->m_QrW;
+		h = this->m_QrH;
+		this->m_QrPixels = NULL;
+		this->m_QrReady = false;
+	}
+	LeaveCriticalSection(&this->m_QrLock);
+
+	if (!pix) return;
+
+	if (this->m_TexQr == 0)
+	{
+		GLuint t = 0;
+		glGenTextures(1, &t);
+		this->m_TexQr = (unsigned int)t;
+	}
+	glBindTexture(GL_TEXTURE_2D, (GLuint)this->m_TexQr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pix);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	stbi_image_free(pix);
 }
 
 void CCashShopUI::OnBuyRecv(BYTE* lpMsg)
@@ -424,8 +600,12 @@ void CCashShopUI::Render()
 	char wcNum[24], wcBuf[48];
 	CSFormatComma(this->m_WCoin, wcNum, sizeof(wcNum));
 	sprintf_s(wcBuf, sizeof(wcBuf), "WCoin: %s", wcNum);
-	CSText(CS_PX + 210.0f, CS_PY + 7.5f, wcBuf, CSColor(255, 224, 105, 255), true);
+	CSText(CS_PX + 170.0f, CS_PY + 7.5f, wcBuf, CSColor(255, 224, 105, 255), true);
 
+	if (this->m_HasSePayInfo && this->m_SePayInfo.enable)
+	{
+		CSDrawButton(CS_PX + CS_PW - 106.0f, CS_PY + 4.0f, 78.0f, 17.0f, "+ Top-Up QR", 2, true);
+	}
 	CSDrawButton(CS_PX + CS_PW - 24.0f, CS_PY + 4.0f, 18.0f, 17.0f, "X", 0, true);
 
 	// 3 Clean Category Tabs: All | Jewels | VIP & Services
@@ -596,6 +776,11 @@ void CCashShopUI::Render()
 		CSDrawButton(mx + mw - 142.0f, btnY, 108.0f, 24.0f, "Cancel", 0, true);
 	}
 
+	if (this->m_SePayOpen)
+	{
+		this->RenderTopUpModal();
+	}
+
 	CSSetFont(oldFont ? oldFont : g_hFont);
 	SetTextColor = oldTC;
 	SetBackgroundTextColor = oldBG;
@@ -637,6 +822,13 @@ void CCashShopUI::UpdateMouse()
 	MouseLButtonPop = false;
 	PlayBuffer(25, 0, 0);
 
+	// SePay QR Top-Up Modal intercepts clicks first
+	if (this->m_SePayOpen)
+	{
+		this->HandleTopUpMouse();
+		return;
+	}
+
 	// Confirm Purchase Modal intercepts clicks first
 	if (this->m_ConfirmProductIdx >= 0 && this->m_ConfirmProductIdx < this->m_Count)
 	{
@@ -675,10 +867,21 @@ void CCashShopUI::UpdateMouse()
 		return;
 	}
 
+	// + Top-Up QR button
+	if (this->m_HasSePayInfo && this->m_SePayInfo.enable && CSHit(CS_PX + CS_PW - 106.0f, CS_PY + 4.0f, 78.0f, 17.0f))
+	{
+		this->m_SePayOpen = true;
+		this->m_SePayPrevWCoin = this->m_WCoin;
+		this->m_SePayPollTick = GetTickCount();
+		this->StartQrDownload(this->m_SePayAmount);
+		return;
+	}
+
 	// Close [X]
 	if (CSHit(CS_PX + CS_PW - 24.0f, CS_PY + 4.0f, 18.0f, 17.0f))
 	{
 		this->m_ConfirmProductIdx = -1;
+		this->m_SePayOpen = false;
 		this->Close();
 		return;
 	}
@@ -758,4 +961,167 @@ void CCashShopUI::UpdateMouse()
 			return;
 		}
 	}
+}
+
+static const DWORD gSePayPresets[6] = { 20000, 50000, 100000, 200000, 500000, 1000000 };
+static const char* gSePayLabels[6] = { "20,000", "50,000", "100,000", "200,000", "500,000", "1,000,000" };
+
+void CCashShopUI::RenderTopUpModal()
+{
+	this->UploadPendingQr();
+
+	DWORD now = GetTickCount();
+	if ((now - this->m_SePayPollTick) >= 4000)
+	{
+		this->m_SePayPollTick = now;
+		this->RequestInfo();
+	}
+
+	CSRect(CS_PX, CS_PY, CS_PW, CS_PH, 0.0f, 0.0f, 0.0f, 0.72f);
+
+	const float mw = 412.0f, mh = 286.0f;
+	const float mx = CS_PX + (CS_PW - mw) * 0.5f;
+	const float my = CS_PY + (CS_PH - mh) * 0.5f;
+
+	CSRect(mx, my, mw, mh, 0.42f, 0.78f, 0.90f, 0.98f);
+	CSRect(mx + 1.0f, my + 1.0f, mw - 2.0f, mh - 2.0f, 0.048f, 0.068f, 0.095f, 0.98f);
+	CSRect(mx + 1.0f, my + 1.0f, mw - 2.0f, 24.0f, 0.080f, 0.118f, 0.162f, 0.98f);
+	CSRect(mx + 1.0f, my + 25.0f, mw - 2.0f, 1.0f, 0.435f, 0.714f, 0.769f, 0.85f);
+
+	CSText(mx + 10.0f, my + 7.0f, "SEPAY QR TOP-UP  |  AUTO WCOIN", CSColor(150, 234, 248, 255), true);
+	CSDrawButton(mx + mw - 24.0f, my + 4.0f, 18.0f, 17.0f, "X", 0, true);
+
+	// Left: White QR card (152x152)
+	const float qx = mx + 14.0f, qy = my + 36.0f, qw = 152.0f, qh = 152.0f;
+	CSRect(qx - 1.0f, qy - 1.0f, qw + 2.0f, qh + 2.0f, 0.42f, 0.78f, 0.90f, 0.95f);
+	CSRect(qx, qy, qw, qh, 0.98f, 0.98f, 0.98f, 1.0f);
+
+	if (this->m_TexQr != 0 && !this->m_QrLoading && !this->m_QrError)
+	{
+		DrawShopIconQuad((GLuint)this->m_TexQr, qx + 4.0f, qy + 4.0f, qw - 8.0f, qh - 8.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+	}
+	else if (this->m_QrLoading)
+	{
+		CSTextCentered(qx + qw * 0.5f, qy + qh * 0.5f - 6.0f, "Loading QR...", CSColor(30, 50, 75, 255), true);
+	}
+	else
+	{
+		CSTextCentered(qx + qw * 0.5f, qy + qh * 0.5f - 12.0f, "QR Unavailable", CSColor(180, 40, 40, 255), true);
+		CSTextCentered(qx + qw * 0.5f, qy + qh * 0.5f + 4.0f, "Transfer manually ->", CSColor(60, 70, 85, 255), false);
+	}
+
+	// Below QR: rate badge
+	char rVnd[24], rWc[24], rateBuf[64];
+	CSFormatComma(this->m_SePayInfo.rateVnd, rVnd, sizeof(rVnd));
+	CSFormatComma(this->m_SePayInfo.rateWcoin, rWc, sizeof(rWc));
+	sprintf_s(rateBuf, sizeof(rateBuf), "%s VND = %s WCoin", rVnd, rWc);
+	CSTextCentered(qx + qw * 0.5f, qy + qh + 8.0f, rateBuf, CSColor(255, 224, 105, 255), true);
+	CSTextCentered(qx + qw * 0.5f, qy + qh + 23.0f, "Auto-credited in 5-15s", CSColor(135, 238, 175, 255), false);
+
+	// Right side: Amount Presets + Transfer Details
+	const float rx = mx + 178.0f;
+	const float rw = mw - 192.0f; // 220
+	CSText(rx, my + 36.0f, "Select Amount (VND):", CSColor(175, 205, 225, 255), true);
+
+	const float bw = (rw - 8.0f) / 3.0f;
+	for (int i = 0; i < 6; i++)
+	{
+		float bx = rx + (i % 3) * (bw + 4.0f);
+		float by = my + 52.0f + (i / 3) * 24.0f;
+		CSDrawButton(bx, by, bw, 20.0f, gSePayLabels[i], (this->m_SePayAmount == gSePayPresets[i]) ? 1 : 0, true);
+	}
+
+	// Bank info box
+	const float iy = my + 104.0f;
+	CSRect(rx, iy, rw, 118.0f, 0.22f, 0.29f, 0.36f, 0.95f);
+	CSRect(rx + 1.0f, iy + 1.0f, rw - 2.0f, 116.0f, 0.062f, 0.088f, 0.120f, 0.96f);
+
+	char line[96], aNum[24], wNum[24];
+	DWORD recvWc = (this->m_SePayInfo.rateVnd > 0)
+		? (DWORD)(((unsigned __int64)this->m_SePayAmount * this->m_SePayInfo.rateWcoin) / this->m_SePayInfo.rateVnd)
+		: this->m_SePayAmount;
+	CSFormatComma(this->m_SePayAmount, aNum, sizeof(aNum));
+	CSFormatComma(recvWc, wNum, sizeof(wNum));
+
+	sprintf_s(line, sizeof(line), "Bank: %s", this->m_SePayInfo.bankCode);
+	CSText(rx + 8.0f, iy + 8.0f, line, CSColor(215, 232, 245, 255), false);
+
+	sprintf_s(line, sizeof(line), "Account No: %s", this->m_SePayInfo.bankAccount);
+	CSText(rx + 8.0f, iy + 24.0f, line, CSColor(255, 226, 120, 255), true);
+
+	sprintf_s(line, sizeof(line), "Owner: %s", this->m_SePayInfo.bankOwner);
+	CSText(rx + 8.0f, iy + 40.0f, line, CSColor(200, 218, 232, 255), false);
+
+	CSRect(rx + 8.0f, iy + 56.0f, rw - 16.0f, 1.0f, 0.24f, 0.34f, 0.42f, 0.85f);
+
+	sprintf_s(line, sizeof(line), "Content: %s", this->m_SePayInfo.account);
+	CSText(rx + 8.0f, iy + 63.0f, line, CSColor(115, 250, 255, 255), true);
+
+	sprintf_s(line, sizeof(line), "Amount: %s VND", aNum);
+	CSText(rx + 8.0f, iy + 80.0f, line, CSColor(215, 232, 245, 255), false);
+
+	sprintf_s(line, sizeof(line), "Receive: +%s WCoin", wNum);
+	CSText(rx + 8.0f, iy + 96.0f, line, CSColor(120, 248, 165, 255), true);
+
+	// Status banner inside modal
+	if (this->m_StatusText[0] != 0 && (GetTickCount() - this->m_StatusTick) < 6000)
+	{
+		DWORD sc = this->m_StatusGood ? CSColor(120, 248, 165, 255) : CSColor(255, 115, 115, 255);
+		CSTextCentered(mx + mw * 0.5f, my + mh - 46.0f, this->m_StatusText, sc, true);
+	}
+
+	// Footer buttons
+	const float fy = my + mh - 29.0f;
+	CSDrawButton(mx + 14.0f, fy, 110.0f, 20.0f, "Check Balance", 1, true);
+	CSDrawButton(mx + 132.0f, fy, 92.0f, 20.0f, "Reload QR", 0, true);
+	CSDrawButton(mx + mw - 86.0f, fy, 72.0f, 20.0f, "Close", 0, true);
+}
+
+bool CCashShopUI::HandleTopUpMouse()
+{
+	const float mw = 412.0f, mh = 286.0f;
+	const float mx = CS_PX + (CS_PW - mw) * 0.5f;
+	const float my = CS_PY + (CS_PH - mh) * 0.5f;
+
+	// Close [X] or Close button
+	const float fy = my + mh - 29.0f;
+	if (CSHit(mx + mw - 24.0f, my + 4.0f, 18.0f, 17.0f) || CSHit(mx + mw - 86.0f, fy, 72.0f, 20.0f))
+	{
+		this->m_SePayOpen = false;
+		return true;
+	}
+
+	// Preset amount buttons
+	const float rx = mx + 178.0f;
+	const float rw = mw - 192.0f;
+	const float bw = (rw - 8.0f) / 3.0f;
+	for (int i = 0; i < 6; i++)
+	{
+		float bx = rx + (i % 3) * (bw + 4.0f);
+		float by = my + 52.0f + (i / 3) * 24.0f;
+		if (CSHit(bx, by, bw, 20.0f))
+		{
+			if (this->m_SePayAmount != gSePayPresets[i])
+			{
+				this->StartQrDownload(gSePayPresets[i]);
+			}
+			return true;
+		}
+	}
+
+	// Check Balance
+	if (CSHit(mx + 14.0f, fy, 110.0f, 20.0f))
+	{
+		this->RequestInfo();
+		return true;
+	}
+
+	// Reload QR
+	if (CSHit(mx + 132.0f, fy, 92.0f, 20.0f))
+	{
+		this->StartQrDownload(this->m_SePayAmount);
+		return true;
+	}
+
+	return true;
 }

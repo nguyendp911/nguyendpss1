@@ -341,6 +341,24 @@ class GameAdminPanel : Panel, IShown
     DataGridView gridTopLv, gridTopGuild;
     Label lblRankStatus;
 
+    // Sub-tab 5: Chaos Castle
+    NumericUpDown numCcWarn, numCcNotify, numCcEvent, numCcClose;
+    TextBox tbCcTimes;
+    DataGridView gridCc;
+    Label lblCcStatus;
+
+    // Sub-tab 6: SePay QR Top-Up
+    CheckBox ckSpEnable, ckSpAuto;
+    ComboBox cbSpBank;
+    TextBox tbSpAcc, tbSpOwner, tbSpKey, tbSpTestAcc;
+    NumericUpDown numSpPort, numSpRateVnd, numSpRateWc, numSpMin;
+    RBtn btnSpToggle;
+    DataGridView gridSp;
+    Label lblSpStatus;
+
+    // Sub-tab 7: NPC Shop Manager
+    NpcShopPanel npcShopPanel;
+
     public GameAdminPanel(MainForm f)
     {
         form = f;
@@ -353,6 +371,18 @@ class GameAdminPanel : Panel, IShown
         AddSub(nav, host, "Cash Shop", BuildCashShopPage());
         AddSub(nav, host, "Chợ Trời", BuildMarketPage());
         AddSub(nav, host, "BXH + Backup", BuildRankBackupPage());
+        AddSub(nav, host, "Chaos Castle", BuildChaosCastlePage());
+        AddSub(nav, host, "Nạp SePay QR", BuildSePayPage());
+        npcShopPanel = new NpcShopPanel(form, GetItemCatalog);
+        AddSub(nav, host, "NPC Shop", npcShopPanel);
+
+        var spCfg = SePayServer.LoadConfig();
+        SePayServer.OnLog = delegate(string msg) { try { form.BeginInvoke((Action)(delegate { form.Say(msg); })); } catch { } };
+        if (spCfg.Enable && spCfg.AutoStartWebhook)
+        {
+            string m;
+            SePayServer.Start(out m);
+        }
 
         Controls.Add(host);
         Controls.Add(nav);
@@ -397,6 +427,9 @@ class GameAdminPanel : Panel, IShown
         else if (curSub == 1) LoadCashShop();
         else if (curSub == 2) LoadMarket();
         else if (curSub == 3) LoadRankings();
+        else if (curSub == 4) LoadChaosCastle();
+        else if (curSub == 5) LoadSePay();
+        else if (curSub == 6) npcShopPanel.LoadShopList();
     }
 
     RBtn Btn(string text, Color accent, bool ghost, EventHandler h)
@@ -1023,5 +1056,424 @@ class GameAdminPanel : Panel, IShown
         string dir = Path.GetFullPath(Path.Combine(baseDir, @"..\Backups"));
         Directory.CreateDirectory(dir);
         try { Process.Start("explorer.exe", dir); } catch { }
+    }
+
+    // =========================================================================
+    // SUB-TAB 5: CHAOS CASTLE MANAGER (Data\Event\ChaosCastle.dat, NO BOM)
+    // =========================================================================
+    string ChaosCastlePath { get { return Path.Combine(baseDir, @"Data\Event\ChaosCastle.dat"); } }
+
+    static readonly string[] CcTierNames = {
+        "CC 1 (Lv. 15 - 80)",
+        "CC 2 (Lv. 81 - 160)",
+        "CC 3 (Lv. 161 - 260)",
+        "CC 4 (Lv. 261 - 400)",
+        "CC 5 (Lv. 401 - 650)",
+        "CC 6 (Lv. 651 - 1000)"
+    };
+
+    Panel BuildChaosCastlePage()
+    {
+        var p = new Panel { BackColor = Theme.Panel, Padding = new Padding(14, 10, 14, 10) };
+
+        var top = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 44, BackColor = Theme.Panel, WrapContents = false };
+        top.Controls.Add(Btn("Lưu + Reload Event", Theme.Green, false, delegate { SaveChaosCastle(true); }));
+        top.Controls.Add(Btn("Tải lại", Theme.Muted, true, delegate { LoadChaosCastle(); }));
+        top.Controls.Add(Btn("Mở file .dat", Theme.Blue, true, delegate {
+            try { if (File.Exists(ChaosCastlePath)) Process.Start("notepad.exe", ChaosCastlePath); } catch { }
+        }));
+        var lCmd = K.Lbl("Lệnh GM: /startcc (mở ngay) | Người chơi: /cc hoặc NPC Guard Lorencia (136, 127)", true);
+        lCmd.Margin = new Padding(10, 9, 0, 0);
+        top.Controls.Add(lCmd);
+
+        // Card 1: Timings + Schedule
+        var card = new Panel { Dock = DockStyle.Top, Height = 122, BackColor = Theme.Bg, Padding = new Padding(12, 8, 12, 8), Margin = new Padding(0, 0, 0, 8) };
+
+        var rowTime = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 34, BackColor = Theme.Bg, WrapContents = false };
+        numCcWarn = K.Num(1, 30, 3, 56);
+        numCcNotify = K.Num(1, 10, 1, 56);
+        numCcEvent = K.Num(2, 60, 10, 56);
+        numCcClose = K.Num(1, 10, 2, 56);
+        AddCcField(rowTime, "Mở cổng (phút):", numCcWarn);
+        AddCcField(rowTime, "Đếm ngược (phút):", numCcNotify);
+        AddCcField(rowTime, "Thời gian đấu (phút):", numCcEvent);
+        AddCcField(rowTime, "Dọn sân (phút):", numCcClose);
+
+        var rowPreset = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 34, BackColor = Theme.Bg, WrapContents = false };
+        var lSch = K.Lbl("Lịch tự động (HH:MM, cách nhau dấu phẩy):", true); lSch.Margin = new Padding(0, 7, 10, 0);
+        rowPreset.Controls.Add(lSch);
+        rowPreset.Controls.Add(Btn("Giờ lẻ (2h/lần)", Theme.Blue, true, delegate {
+            tbCcTimes.Text = "01:00, 03:00, 05:00, 07:00, 09:00, 11:00, 13:00, 15:00, 17:00, 19:00, 21:00, 23:00";
+        }));
+        rowPreset.Controls.Add(Btn("Mỗi giờ", Theme.Blue, true, delegate {
+            var list = new List<string>();
+            for (int h = 0; h < 24; h++) list.Add(h.ToString("00") + ":00");
+            tbCcTimes.Text = string.Join(", ", list.ToArray());
+        }));
+        rowPreset.Controls.Add(Btn("Mỗi 30 phút", Theme.Amber, true, delegate {
+            var list = new List<string>();
+            for (int h = 0; h < 24; h++) { list.Add(h.ToString("00") + ":00"); list.Add(h.ToString("00") + ":30"); }
+            tbCcTimes.Text = string.Join(", ", list.ToArray());
+        }));
+
+        tbCcTimes = K.Tb(600);
+        tbCcTimes.Dock = DockStyle.Top;
+
+        card.Controls.Add(tbCcTimes);
+        card.Controls.Add(rowPreset);
+        card.Controls.Add(rowTime);
+
+        var spacer = new Panel { Dock = DockStyle.Top, Height = 8, BackColor = Theme.Panel };
+
+        // Grid: 6 tiers rewards & fees (editable directly)
+        gridCc = new DataGridView();
+        K.StyleGrid(gridCc);
+        gridCc.Dock = DockStyle.Fill;
+        gridCc.ReadOnly = false;
+        gridCc.AllowUserToAddRows = false;
+        gridCc.AllowUserToDeleteRows = false;
+        gridCc.SelectionMode = DataGridViewSelectionMode.CellSelect;
+        gridCc.EditMode = DataGridViewEditMode.EditOnEnter;
+
+        gridCc.Columns.Add("tier", "Tầng Chaos Castle");
+        gridCc.Columns.Add("expP", "EXP / Kill Người");
+        gridCc.Columns.Add("expM", "EXP / Kill Quái");
+        gridCc.Columns.Add("zenW", "Zen Thắng Cuộc");
+        gridCc.Columns.Add("fee", "Phí Vào Cửa (Zen)");
+        gridCc.Columns["tier"].ReadOnly = true;
+        gridCc.Columns["tier"].FillWeight = 120;
+
+        lblCcStatus = K.Lbl("Nhấp trực tiếp vào ô số để sửa thưởng EXP / Zen / Phí vào cửa rồi bấm 'Lưu + Reload Event'.", true);
+        lblCcStatus.Dock = DockStyle.Bottom;
+        lblCcStatus.Height = 24;
+
+        p.Controls.Add(gridCc);
+        p.Controls.Add(spacer);
+        p.Controls.Add(card);
+        p.Controls.Add(lblCcStatus);
+        p.Controls.Add(top);
+        return p;
+    }
+
+    void AddCcField(FlowLayoutPanel row, string label, Control ctrl)
+    {
+        var l = K.Lbl(label, true); l.Margin = new Padding(0, 7, 4, 0);
+        ctrl.Margin = new Padding(0, 3, 14, 0);
+        row.Controls.Add(l);
+        row.Controls.Add(ctrl);
+    }
+
+    void LoadChaosCastle()
+    {
+        gridCc.Rows.Clear();
+        int[,] expTbl = new int[6, 2] { { 25000, 8000 }, { 60000, 18000 }, { 150000, 40000 }, { 350000, 90000 }, { 800000, 200000 }, { 1800000, 450000 } };
+        int[,] zenTbl = new int[6, 2] { { 200000, 25000 }, { 500000, 80000 }, { 1000000, 150000 }, { 2000000, 250000 }, { 4000000, 400000 }, { 8000000, 650000 } };
+        var times = new List<string>();
+
+        if (File.Exists(ChaosCastlePath))
+        {
+            int sec = -1;
+            foreach (string raw in File.ReadAllLines(ChaosCastlePath))
+            {
+                string line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("//")) continue;
+                if (line.Equals("end", StringComparison.OrdinalIgnoreCase)) { sec = -1; continue; }
+                int sNum;
+                if (sec < 0 && int.TryParse(line, out sNum)) { sec = sNum; continue; }
+                var tok = Regex.Split(line, @"\s+");
+                if (sec == 0 && tok.Length >= 4)
+                {
+                    int v;
+                    if (int.TryParse(tok[0], out v)) numCcWarn.Value = Clamp(numCcWarn, v);
+                    if (int.TryParse(tok[1], out v)) numCcNotify.Value = Clamp(numCcNotify, v);
+                    if (int.TryParse(tok[2], out v)) numCcEvent.Value = Clamp(numCcEvent, v);
+                    if (int.TryParse(tok[3], out v)) numCcClose.Value = Clamp(numCcClose, v);
+                }
+                else if (sec == 1 && tok.Length >= 7)
+                {
+                    int hh, mm;
+                    if (int.TryParse(tok[4], out hh) && int.TryParse(tok[5], out mm))
+                        times.Add(hh.ToString("00") + ":" + mm.ToString("00"));
+                }
+                else if (sec == 2 && tok.Length >= 3)
+                {
+                    int lv, ep, em;
+                    if (int.TryParse(tok[0], out lv) && lv >= 0 && lv < 6)
+                    {
+                        if (int.TryParse(tok[1], out ep)) expTbl[lv, 0] = ep;
+                        if (int.TryParse(tok[2], out em)) expTbl[lv, 1] = em;
+                    }
+                }
+                else if (sec == 3 && tok.Length >= 3)
+                {
+                    int lv, zw, fe;
+                    if (int.TryParse(tok[0], out lv) && lv >= 0 && lv < 6)
+                    {
+                        if (int.TryParse(tok[1], out zw)) zenTbl[lv, 0] = zw;
+                        if (int.TryParse(tok[2], out fe)) zenTbl[lv, 1] = fe;
+                    }
+                }
+            }
+        }
+
+        tbCcTimes.Text = times.Count > 0 ? string.Join(", ", times.ToArray()) : "01:00, 03:00, 05:00, 07:00, 09:00, 11:00, 13:00, 15:00, 17:00, 19:00, 21:00, 23:00";
+        for (int i = 0; i < 6; i++)
+            gridCc.Rows.Add(CcTierNames[i], expTbl[i, 0], expTbl[i, 1], zenTbl[i, 0], zenTbl[i, 1]);
+
+        lblCcStatus.Text = "Đã tải cấu hình ChaosCastle.dat (" + times.Count + " khung giờ, 6 tầng).";
+    }
+
+    static int CellInt(DataGridViewRow row, int col, int def)
+    {
+        int v;
+        string s = Convert.ToString(row.Cells[col].Value ?? "").Replace(",", "").Replace(".", "").Trim();
+        return int.TryParse(s, out v) && v >= 0 ? v : def;
+    }
+
+    void SaveChaosCastle(bool reload)
+    {
+        try
+        {
+            gridCc.EndEdit();
+            var sb = new StringBuilder();
+            sb.AppendLine("0");
+            sb.AppendLine("//WarningTime   NotifyTime   EventTime   CloseTime");
+            sb.AppendFormat("{0,-15} {1,-12} {2,-11} {3}\r\n", (int)numCcWarn.Value, (int)numCcNotify.Value, (int)numCcEvent.Value, (int)numCcClose.Value);
+            sb.AppendLine("end");
+            sb.AppendLine();
+            sb.AppendLine("1");
+            sb.AppendLine("//Year   Month   Day   DoW   Hour   Minute   Second");
+            int timeCount = 0;
+            foreach (string part in tbCcTimes.Text.Split(new[] { ',', ';', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var hm = part.Trim().Split(':');
+                int hh = 0, mm = 0;
+                if (hm.Length >= 1 && int.TryParse(hm[0].Trim(), out hh) && hh >= 0 && hh <= 23)
+                {
+                    if (hm.Length >= 2) int.TryParse(hm[1].Trim(), out mm);
+                    if (mm < 0 || mm > 59) mm = 0;
+                    sb.AppendFormat("*        *       *     *     {0,-6} {1,-8} 0\r\n", hh, mm);
+                    timeCount++;
+                }
+            }
+            if (timeCount == 0) sb.AppendLine("*        *       *     *     1      0        0");
+            sb.AppendLine("end");
+            sb.AppendLine();
+            sb.AppendLine("2");
+            sb.AppendLine("//Level   ExpPerPlayerKill   ExpPerMonsterKill");
+            for (int i = 0; i < 6 && i < gridCc.Rows.Count; i++)
+                sb.AppendFormat("{0,-9} {1,-18} {2}\r\n", i, CellInt(gridCc.Rows[i], 1, 0), CellInt(gridCc.Rows[i], 2, 0));
+            sb.AppendLine("end");
+            sb.AppendLine();
+            sb.AppendLine("3");
+            sb.AppendLine("//Level   WinnerZen   EntranceFee");
+            for (int i = 0; i < 6 && i < gridCc.Rows.Count; i++)
+                sb.AppendFormat("{0,-9} {1,-11} {2}\r\n", i, CellInt(gridCc.Rows[i], 3, 0), CellInt(gridCc.Rows[i], 4, 0));
+            sb.AppendLine("end");
+
+            File.WriteAllText(ChaosCastlePath, sb.ToString(), utf8NoBom);
+            int n = reload ? form.ReloadGameServers(32712, "Reload Event") : 0;
+            lblCcStatus.Text = n > 0
+                ? "Đã lưu ChaosCastle.dat (NO BOM, " + timeCount + " khung giờ) + Reload Event tới " + n + " GameServer!"
+                : "Đã lưu ChaosCastle.dat (NO BOM, " + timeCount + " khung giờ). Sẽ áp dụng khi bật GameServer.";
+            form.Say(lblCcStatus.Text);
+        }
+        catch (Exception ex) { lblCcStatus.Text = "Lỗi lưu ChaosCastle.dat: " + ex.Message; }
+    }
+
+    // =========================================================================
+    // SUB-TAB 6: SEPAY QR TOP-UP & WEBHOOK MANAGER
+    // =========================================================================
+    static readonly string[] SePayBanks = {
+        "MB", "VCB", "TCB", "ACB", "BIDV", "ICB", "VPB", "TPB", "VIB",
+        "OCB", "MSB", "SHB", "STB", "HDB", "EXB", "NAB", "CAKE", "TIMO"
+    };
+
+    Panel BuildSePayPage()
+    {
+        var p = new Panel { BackColor = Theme.Panel, Padding = new Padding(14, 10, 14, 10) };
+
+        var top = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 44, BackColor = Theme.Panel, WrapContents = false };
+        top.Controls.Add(Btn("Lưu + Reload Custom", Theme.Green, false, delegate { SaveSePay(); }));
+        btnSpToggle = Btn("Bật Webhook", Theme.Blue, false, delegate { ToggleSePayWebhook(); });
+        top.Controls.Add(btnSpToggle);
+        top.Controls.Add(Btn("Tải lịch sử", Theme.Muted, true, delegate { LoadSePayHistory(); }));
+
+        var lTest = K.Lbl("Test TK:", true); lTest.Margin = new Padding(10, 8, 4, 0);
+        tbSpTestAcc = K.Tb(95); tbSpTestAcc.Margin = new Padding(0, 4, 6, 0); tbSpTestAcc.Text = "test2";
+        top.Controls.Add(lTest);
+        top.Controls.Add(tbSpTestAcc);
+        top.Controls.Add(Btn("Giả lập nạp 100k", Theme.Amber, true, delegate {
+            string acc = tbSpTestAcc.Text.Trim();
+            if (acc.Length == 0) { lblSpStatus.Text = "Nhập tên tài khoản để test."; return; }
+            string msg;
+            SePayServer.SimulatePayment(acc, 100000, out msg);
+            lblSpStatus.Text = msg;
+            form.Say(msg);
+            LoadSePayHistory();
+        }));
+
+        // Config Card
+        var card = new Panel { Dock = DockStyle.Top, Height = 148, BackColor = Theme.Bg, Padding = new Padding(12, 8, 12, 8) };
+        var tbl = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 6, RowCount = 4, BackColor = Theme.Bg };
+        tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
+        tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33));
+        tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 102));
+        tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33));
+        tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 104));
+        tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34));
+
+        cbSpBank = new ComboBox { Width = 110, DropDownStyle = ComboBoxStyle.DropDown, BackColor = Theme.Panel, ForeColor = Theme.Text, FlatStyle = FlatStyle.Flat };
+        cbSpBank.Items.AddRange(SePayBanks);
+        tbSpAcc = K.Tb(150);
+        tbSpOwner = K.Tb(170);
+        tbSpKey = K.Tb(180);
+        numSpPort = K.Num(1024, 65530, 8088, 86);
+        numSpRateVnd = K.Num(1000, 100000000, 100000, 105);
+        numSpRateWc = K.Num(1, 100000000, 100000, 105);
+        numSpMin = K.Num(1000, 10000000, 10000, 105);
+        ckSpEnable = K.Ck("Bật nạp QR trong Game", true);
+        ckSpAuto = K.Ck("Tự bật Webhook khi mở Launcher", true);
+
+        AddPair(tbl, 0, 0, "Ngân hàng:", cbSpBank);
+        AddPair(tbl, 0, 2, "Số tài khoản:", tbSpAcc);
+        AddPair(tbl, 0, 4, "Chủ tài khoản:", tbSpOwner);
+
+        AddPair(tbl, 1, 0, "HMAC-SHA256:", tbSpKey);
+        AddPair(tbl, 1, 2, "Port Webhook:", numSpPort);
+        AddPair(tbl, 1, 4, "Nạp tối thiểu:", numSpMin);
+
+        AddPair(tbl, 2, 0, "Mức VND:", numSpRateVnd);
+        AddPair(tbl, 2, 2, "Đổi WCoin:", numSpRateWc);
+        var lUrl = K.Lbl("URL Webhook: http://<IP>:<Port>/sepay/webhook", true);
+        lUrl.ForeColor = Theme.Blue; lUrl.Margin = new Padding(0, 6, 0, 0);
+        tbl.Controls.Add(lUrl, 4, 2); tbl.SetColumnSpan(lUrl, 2);
+
+        tbl.Controls.Add(ckSpEnable, 0, 3); tbl.SetColumnSpan(ckSpEnable, 3);
+        tbl.Controls.Add(ckSpAuto, 3, 3); tbl.SetColumnSpan(ckSpAuto, 3);
+
+        card.Controls.Add(tbl);
+
+        var spacer = new Panel { Dock = DockStyle.Top, Height = 8, BackColor = Theme.Panel };
+
+        // Transaction History Grid
+        gridSp = new DataGridView();
+        K.StyleGrid(gridSp);
+        gridSp.Dock = DockStyle.Fill;
+        gridSp.Columns.Add("id", "SePay TX ID");
+        gridSp.Columns.Add("acc", "Tài khoản");
+        gridSp.Columns.Add("bank", "Ngân hàng");
+        gridSp.Columns.Add("vnd", "Số tiền (VND)");
+        gridSp.Columns.Add("wc", "WCoin cộng");
+        gridSp.Columns.Add("ct", "Nội dung CK");
+        gridSp.Columns.Add("st", "Trạng thái");
+        gridSp.Columns.Add("dt", "Thời gian");
+        gridSp.Columns["id"].FillWeight = 75;
+        gridSp.Columns["acc"].FillWeight = 70;
+        gridSp.Columns["bank"].FillWeight = 60;
+        gridSp.Columns["vnd"].FillWeight = 80;
+        gridSp.Columns["wc"].FillWeight = 80;
+        gridSp.Columns["ct"].FillWeight = 115;
+        gridSp.Columns["st"].FillWeight = 75;
+        gridSp.Columns["dt"].FillWeight = 95;
+
+        lblSpStatus = K.Lbl("Nội dung chuyển khoản = Tên tài khoản game. Quy đổi mặc định: 100,000 VND = 100,000 WCoin.", true);
+        lblSpStatus.Dock = DockStyle.Bottom;
+        lblSpStatus.Height = 24;
+
+        p.Controls.Add(gridSp);
+        p.Controls.Add(spacer);
+        p.Controls.Add(card);
+        p.Controls.Add(lblSpStatus);
+        p.Controls.Add(top);
+        return p;
+    }
+
+    void UpdateSePayToggleBtn()
+    {
+        if (btnSpToggle == null) return;
+        btnSpToggle.Text = SePayServer.IsRunning ? "Tắt Webhook (Đang chạy :" + SePayServer.ActivePort + ")" : "Bật Webhook";
+        btnSpToggle.BackColor = SePayServer.IsRunning ? Theme.Red : Theme.Blue;
+        btnSpToggle.Invalidate();
+    }
+
+    void LoadSePay()
+    {
+        var cfg = SePayServer.LoadConfig();
+        ckSpEnable.Checked = cfg.Enable;
+        ckSpAuto.Checked = cfg.AutoStartWebhook;
+        cbSpBank.Text = cfg.BankCode;
+        tbSpAcc.Text = cfg.BankAccount;
+        tbSpOwner.Text = cfg.BankOwner;
+        tbSpKey.Text = cfg.HmacSecret;
+        numSpPort.Value = Clamp(numSpPort, cfg.WebhookPort);
+        numSpRateVnd.Value = Math.Max(numSpRateVnd.Minimum, Math.Min(numSpRateVnd.Maximum, cfg.RateVnd));
+        numSpRateWc.Value = Math.Max(numSpRateWc.Minimum, Math.Min(numSpRateWc.Maximum, cfg.RateWcoin));
+        numSpMin.Value = Math.Max(numSpMin.Minimum, Math.Min(numSpMin.Maximum, cfg.MinAmount));
+        UpdateSePayToggleBtn();
+        LoadSePayHistory();
+    }
+
+    void SaveSePay()
+    {
+        try
+        {
+            var cfg = new SePayServer.Config
+            {
+                Enable = ckSpEnable.Checked,
+                AutoStartWebhook = ckSpAuto.Checked,
+                BankCode = cbSpBank.Text.Trim(),
+                BankAccount = tbSpAcc.Text.Trim(),
+                BankOwner = tbSpOwner.Text.Trim(),
+                ApiKey = "",
+                HmacSecret = tbSpKey.Text.Trim(),
+                WebhookPort = (int)numSpPort.Value,
+                RateVnd = (long)numSpRateVnd.Value,
+                RateWcoin = (long)numSpRateWc.Value,
+                MinAmount = (long)numSpMin.Value
+            };
+            SePayServer.SaveConfig(cfg);
+            int n = form.ReloadGameServers(32711, "Reload Custom");
+            lblSpStatus.Text = n > 0
+                ? "Đã lưu SePay.ini (NO BOM) + gửi Reload Custom tới " + n + " GameServer!"
+                : "Đã lưu SePay.ini (NO BOM). Sẽ áp dụng khi bật GameServer.";
+            form.Say(lblSpStatus.Text);
+        }
+        catch (Exception ex) { lblSpStatus.Text = "Lỗi lưu SePay.ini: " + ex.Message; }
+    }
+
+    void ToggleSePayWebhook()
+    {
+        if (SePayServer.IsRunning)
+        {
+            SePayServer.Stop();
+            lblSpStatus.Text = "SePay Webhook đã dừng.";
+        }
+        else
+        {
+            string msg;
+            SePayServer.Start(out msg);
+            lblSpStatus.Text = msg;
+        }
+        UpdateSePayToggleBtn();
+    }
+
+    void LoadSePayHistory()
+    {
+        gridSp.Rows.Clear();
+        if (!Db.Available) { lblSpStatus.Text = "MariaDB chưa sẵn sàng."; return; }
+        SePayServer.EnsureTable();
+        string err;
+        var rows = Db.Query("SELECT SePayId, AccountID, BankCode, AmountVND, WCoinAdded, Content, Status, DATE_FORMAT(CreatedAt,'%Y-%m-%d %H:%i:%s') FROM SePayTransactions ORDER BY CreatedAt DESC LIMIT 100", out err);
+        if (err != null) { lblSpStatus.Text = "Lỗi tải lịch sử: " + err; return; }
+        foreach (var r in rows)
+        {
+            if (r.Length < 8) continue;
+            long vnd, wc;
+            long.TryParse(r[3], out vnd);
+            long.TryParse(r[4], out wc);
+            gridSp.Rows.Add(r[0], r[1], r[2], vnd.ToString("N0"), "+" + wc.ToString("N0"), r[5], r[6], r[7]);
+        }
+        lblSpStatus.Text = (SePayServer.IsRunning ? "[Webhook ONLINE :" + SePayServer.ActivePort + "] " : "[Webhook OFF] ") + rows.Count + " giao dịch gần nhất.";
     }
 }

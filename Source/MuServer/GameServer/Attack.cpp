@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Attack.h"
 #include "Duel.h"
+#include "ChaosCastle.h"
+#include "Battlefield.h"
 #include "CustomCombo.h"
 #include "BattleSoccerManager.h"
 #include "CustomSafeZone.h"
@@ -90,6 +92,10 @@ bool CAttack::Attack(LPOBJ lpObj, LPOBJ lpTarget, CSkill* lpSkill, bool send, in
 
 	if (lpObj->Type == OBJECT_USER && lpTarget->Type == OBJECT_MONSTER)
 	{
+		if (BF_MAP_RANGE(lpObj->Map) != 0 && !gBattlefield.CanAttack(lpObj, lpTarget))
+		{
+			return false;
+		}
 		if (OBJECT_RANGE(lpObj->SummonIndex) != false)
 		{
 			if (lpObj->SummonIndex == lpTarget->Index)
@@ -346,7 +352,7 @@ bool CAttack::Attack(LPOBJ lpObj, LPOBJ lpTarget, CSkill* lpSkill, bool send, in
 		{
 			if (send != false)
 			{
-				gSkillManager.GCSkillAttackSend(lpObj, lpSkill->m_index, lpTarget->Index, 0);
+				gSkillManager.GCSkillAttackSend(lpObj, lpSkill->m_index, lpTarget->Index, (lpObj->Type == OBJECT_MONSTER) ? 1 : 0);
 			}
 		}
 		else
@@ -791,6 +797,16 @@ bool CAttack::CheckPlayerTarget(LPOBJ lpObj, LPOBJ lpTarget)
 		return true;
 	}
 
+	if (CC_MAP_RANGE(lpObj->Map) != 0 && CC_MAP_RANGE(lpTarget->Map) != 0)
+	{
+		return (gChaosCastle.GetState(GET_CC_LEVEL(lpObj->Map)) == CC_STATE_START);
+	}
+
+	if (BF_MAP_RANGE(lpObj->Map) != 0 && BF_MAP_RANGE(lpTarget->Map) != 0)
+	{
+		return gBattlefield.CanAttack(lpObj, lpTarget);
+	}
+
 	if (gParty.IsMember(lpObj->PartyNumber, lpTarget->Index) != false)
 	{
 		return false;
@@ -881,7 +897,7 @@ void CAttack::MissSend(LPOBJ lpObj, LPOBJ lpTarget, CSkill* lpSkill, int send, i
 
 	if (send != 0 && lpSkill != 0)
 	{
-		gSkillManager.GCSkillAttackSend(lpObj, lpSkill->m_index, lpTarget->Index, 0);
+		gSkillManager.GCSkillAttackSend(lpObj, lpSkill->m_index, lpTarget->Index, (lpObj->Type == OBJECT_MONSTER) ? 1 : 0);
 	}
 }
 

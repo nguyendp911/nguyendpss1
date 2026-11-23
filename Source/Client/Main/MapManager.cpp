@@ -100,6 +100,17 @@ char* CMapManager::GetMapName(int MapNumber)
 			return GlobalText[MapNumber + 30];
 		}
 
+		else if (MapNumber >= 18 && MapNumber <= 23)
+		{
+			static char ccNames[6][20] = { "Chaos Castle 1", "Chaos Castle 2", "Chaos Castle 3", "Chaos Castle 4", "Chaos Castle 5", "Chaos Castle 6" };
+			return ccNames[MapNumber - 18];
+		}
+		else if (MapNumber == 24)
+		{
+			static char bfName[] = "Battlefield";
+			return bfName;
+		}
+
 		return GlobalText[MapNumber + 40];
 	}
 	

@@ -81,7 +81,7 @@ void CHealthBar::DrawHealthBar()
 {
 	((void(_cdecl*)())0x004BCA20)();
 
-	if (gHealthBar.DeleteHealthBar)
+	if (gHealthBar.DeleteHealthBar || (World >= 18 && World <= 23))
 	{
 		return;
 	}
@@ -179,7 +179,7 @@ __declspec(naked) void CHealthBar::DrawPointingHealthBar()
 		Pushad;
 	}
 
-	if (gHealthBar.DeleteHealthBar)
+	if (gHealthBar.DeleteHealthBar || (World >= 18 && World <= 23))
 	{
 		goto EXIT;
 	}

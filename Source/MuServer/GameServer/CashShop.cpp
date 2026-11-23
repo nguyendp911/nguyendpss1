@@ -7,6 +7,7 @@
 #include "Market.h"
 #include "Notice.h"
 #include "ObjectManager.h"
+#include "Path.h"
 #include "Protocol.h"
 #include "Quest.h"
 #include "ResetTable.h"
@@ -22,6 +23,14 @@ CCashShop::CCashShop()
 	this->m_Enable = false;
 	this->m_Count = 0;
 	memset(this->m_Products, 0, sizeof(this->m_Products));
+
+	this->m_SePayEnable = false;
+	this->m_SePayRateVnd = 100000;
+	this->m_SePayRateWcoin = 100000;
+	this->m_SePayMinAmount = 10000;
+	memset(this->m_SePayBankCode, 0, sizeof(this->m_SePayBankCode));
+	memset(this->m_SePayBankAccount, 0, sizeof(this->m_SePayBankAccount));
+	memset(this->m_SePayBankOwner, 0, sizeof(this->m_SePayBankOwner));
 }
 
 CCashShop::~CCashShop()
@@ -67,11 +76,46 @@ void CCashShop::Load(const char* path)
 	}
 
 	LogAdd(LOG_BLUE, "[CashShop] Loaded %d products (Enable=%d)", this->m_Count, this->m_Enable ? 1 : 0);
+
+	// Load SePay QR Top-Up config from Data\Custom\SePay.ini
+	const char* sepayPath = gPath.GetFullPath("Custom\\SePay.ini");
+	this->m_SePayEnable = (GetPrivateProfileIntA("SePay", "Enable", 1, sepayPath) != 0);
+	this->m_SePayRateVnd = (DWORD)GetPrivateProfileIntA("SePay", "RateVnd", 100000, sepayPath);
+	this->m_SePayRateWcoin = (DWORD)GetPrivateProfileIntA("SePay", "RateWcoin", 100000, sepayPath);
+	this->m_SePayMinAmount = (DWORD)GetPrivateProfileIntA("SePay", "MinAmount", 10000, sepayPath);
+	if (this->m_SePayRateVnd == 0) this->m_SePayRateVnd = 100000;
+	if (this->m_SePayRateWcoin == 0) this->m_SePayRateWcoin = 100000;
+	GetPrivateProfileStringA("SePay", "BankCode", "MB", this->m_SePayBankCode, sizeof(this->m_SePayBankCode), sepayPath);
+	GetPrivateProfileStringA("SePay", "BankAccount", "", this->m_SePayBankAccount, sizeof(this->m_SePayBankAccount), sepayPath);
+	GetPrivateProfileStringA("SePay", "BankOwner", "", this->m_SePayBankOwner, sizeof(this->m_SePayBankOwner), sepayPath);
+	LogAdd(LOG_BLUE, "[SePay] Enable=%d Bank=%s Acc=%s Rate=%uVND=%uWC",
+		this->m_SePayEnable ? 1 : 0, this->m_SePayBankCode, this->m_SePayBankAccount, this->m_SePayRateVnd, this->m_SePayRateWcoin);
+}
+
+void CCashShop::SendSePayInfo(int aIndex)
+{
+	if (!gObjIsConnectedGP(aIndex)) return;
+	LPOBJ lpObj = &gObj[aIndex];
+
+	PMSG_SEPAY_INFO pMsg;
+	memset(&pMsg, 0, sizeof(pMsg));
+	pMsg.header.set(0x99, 0x30, sizeof(pMsg));
+	pMsg.enable = this->m_SePayEnable ? 1 : 0;
+	pMsg.rateVnd = this->m_SePayRateVnd;
+	pMsg.rateWcoin = this->m_SePayRateWcoin;
+	pMsg.minAmount = this->m_SePayMinAmount;
+	strcpy_s(pMsg.bankCode, sizeof(pMsg.bankCode), this->m_SePayBankCode);
+	strcpy_s(pMsg.bankAccount, sizeof(pMsg.bankAccount), this->m_SePayBankAccount);
+	strcpy_s(pMsg.bankOwner, sizeof(pMsg.bankOwner), this->m_SePayBankOwner);
+	strcpy_s(pMsg.account, sizeof(pMsg.account), lpObj->Account);
+	DataSend(aIndex, (BYTE*)&pMsg, sizeof(pMsg));
 }
 
 void CCashShop::SendList(int aIndex, DWORD wcoin)
 {
 	if (!gObjIsConnectedGP(aIndex)) return;
+
+	this->SendSePayInfo(aIndex);
 
 	BYTE sendBuf[8192];
 	PMSG_CASHSHOP_LIST_ANS* pMsg = (PMSG_CASHSHOP_LIST_ANS*)sendBuf;
